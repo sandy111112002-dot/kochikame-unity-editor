@@ -5925,7 +5925,11 @@ html>body{padding:0}</style>
           && Math.hypot(path.points[0].x - p.x, path.points[0].y - p.y) <= 12;
         const isDirectPathPointHit = index >= 0
           && Math.hypot(path.points[index].x - p.x, path.points[index].y - p.y) <= 12;
-        if (canvasModel && !isDirectPathPointHit) {
+        // A visible model must always win the initial pointer hit. Otherwise a
+        // trajectory point drawn over the sprite makes the model impossible to
+        // select or drag. Path points remain draggable anywhere not occupied by
+        // a model.
+        if (canvasModel) {
           selectedModelId = canvasModel.id;
           draggedModelId = canvasModel.id;
           modelPanelController?.selectModel(canvasModel.id);
@@ -7827,6 +7831,7 @@ html>body{padding:0}</style>
         storeCurrentAnchorsIntoSelectedModel();
         storeCurrentTargetAnchorsIntoSelectedModel();
         selectedModelId = model.id;
+        modelPreviewChosen = true;
         paletteCharacterId = model.characterId;
         activeAnchorCharacterId = model.characterId;
         anchorModelTypeInput.value = modelCharacterCatalog[model.characterId].modelType;
