@@ -1210,6 +1210,10 @@ html>body{padding:0}</style>
           <span><i class="is-node"></i>控制節點</span>
           <span><i class="is-end"></i>終點</span>
         </div>
+        <div class="ufe-project-actions">
+          <button id="ufe-add-trajectory" class="btn btn-primary" type="button">＋ 新增軌道</button>
+          <button id="ufe-remove-trajectory" class="btn btn-ghost" type="button">刪除目前軌道</button>
+        </div>
       </section>
       <div id="ufe-trajectory-file-actions" class="ufe-animation-panel"></div>
     </div>
@@ -1388,7 +1392,7 @@ html>body{padding:0}</style>
     </div>
     <div class="ufe-field">
       <label for="ufe-trajectory-count">彈道數量</label>
-      <input id="ufe-trajectory-count" class="input" type="number" min="1" max="9" step="1" value="1">
+      <input id="ufe-trajectory-count" class="input" type="number" min="0" max="9" step="1" value="0">
     </div>
     <div class="ufe-field">
       <label for="ufe-lane-delay">目前彈道發射延遲（秒）</label>
@@ -1747,6 +1751,8 @@ html>body{padding:0}</style>
       const trailInput = root.querySelector('#ufe-trail');
       const trajectorySelect = root.querySelector('#ufe-trajectory-select');
       const trajectoryFormat = root.querySelector('#ufe-trajectory-format');
+      const addTrajectoryButton = root.querySelector('#ufe-add-trajectory');
+      const removeTrajectoryButton = root.querySelector('#ufe-remove-trajectory');
       const addPathNodeButton = root.querySelector('#ufe-add-path-node');
       const deletePathNodeButton = root.querySelector('#ufe-delete-path-node');
       const deleteTrajectoryButton = root.querySelector('#ufe-delete-trajectory');
@@ -2340,7 +2346,7 @@ html>body{padding:0}</style>
       const shotCount = () => Math.round(clamp(Number(shotCountInput.value) || 1, 1, 20));
       const bulletSpeed = () => clamp(Number(bulletSpeedInput.value) || 10, 1, 100);
       const bulletSpacing = () => clamp(Number(bulletSpacingInput.value) || 0, 0, 5);
-      const trajectoryCount = () => Math.round(clamp(Number(trajectoryCountInput.value) || 1, 1, 9));
+      const trajectoryCount = () => Math.round(clamp(Number(trajectoryCountInput.value) || 0, 0, 9));
       const attackSpeed = () => clamp(Number(attackSpeedInput.value) || 1, .1, 4);
       const hitSpeed = () => clamp(Number(hitSpeedInput.value) || 1, .1, 4);
       const flightDuration = () => duration() * 10 / bulletSpeed();
@@ -2648,9 +2654,9 @@ html>body{padding:0}</style>
       }
       function ensureModelTrajectories(model) {
         if (!model) return [];
-        if (!Array.isArray(model.trajectories) || !model.trajectories.length) {
-          model.trajectories = [normalizeTrajectoryPath(createTrajectoryPath(0), 0)];
-        } else {
+        if (!Array.isArray(model.trajectories)) {
+          model.trajectories = [];
+        } else if (model.trajectories.length) {
           model.trajectories = model.trajectories.map((path, index) => normalizeTrajectoryPath(path, index));
         }
         return model.trajectories;
@@ -2750,12 +2756,14 @@ html>body{padding:0}</style>
         const model = selectedModel();
         if (!model) {
           trajectoryPaths = [];
+          trajectoryCountInput.value = '0';
           selectedTrajectoryIndex = 0;
           selectedPathPointIndex = 0;
           return;
         }
         const trajectories = ensureModelTrajectories(model);
         trajectoryPaths = trajectories;
+        trajectoryCountInput.value = String(trajectoryPaths.length);
         selectedTrajectoryIndex = clamp(selectedTrajectoryIndex, 0, Math.max(0, trajectoryPaths.length - 1));
         selectedPathPointIndex = clamp(selectedPathPointIndex, 0, Math.max(0, trajectoryPaths[selectedTrajectoryIndex]?.points.length - 1));
       }
@@ -3623,8 +3631,10 @@ html>body{padding:0}</style>
         }
         if (trajectoryPaths.length > required) trajectoryPaths.length = required;
         trajectoryPaths.forEach((path, index) => { path.id = index + 1; });
-        selectedTrajectoryIndex = clamp(selectedTrajectoryIndex, 0, required - 1);
-        selectedPathPointIndex = clamp(selectedPathPointIndex, 0, trajectoryPaths[selectedTrajectoryIndex].points.length - 1);
+        selectedTrajectoryIndex = required ? clamp(selectedTrajectoryIndex, 0, required - 1) : 0;
+        selectedPathPointIndex = required
+          ? clamp(selectedPathPointIndex, 0, trajectoryPaths[selectedTrajectoryIndex].points.length - 1)
+          : 0;
         renderTrajectoryControls();
       }
 
@@ -3638,7 +3648,29 @@ html>body{padding:0}</style>
         });
         trajectorySelect.value = String(selectedTrajectoryIndex);
         const path = trajectoryPaths[selectedTrajectoryIndex];
-        if (!path) return;
+        if (!path) {
+          trajectoryFormat.textContent = '尚未新增軌道';
+          nodeCountOutput.textContent = '節點 0 / 10';
+          trajectorySelect.disabled = true;
+          addPathNodeButton.disabled = true;
+          deletePathNodeButton.disabled = true;
+          deleteTrajectoryButton.disabled = true;
+          removeTrajectoryButton.disabled = true;
+          applyPathPresetButton.disabled = true;
+          exportSelectedPathButton.disabled = true;
+          exportAllPathsButton.disabled = true;
+          saveTrajectoryButton.disabled = true;
+          addTrajectoryButton.disabled = false;
+          renderTrajectorySidebar();
+          drawTrajectoryShapePreview();
+          return;
+        }
+        trajectorySelect.disabled = false;
+        removeTrajectoryButton.disabled = false;
+        exportSelectedPathButton.disabled = false;
+        exportAllPathsButton.disabled = false;
+        saveTrajectoryButton.disabled = false;
+        addTrajectoryButton.disabled = trajectoryPaths.length >= 9;
         renderPathTypeOptions(trajectorySelectorValue(path));
         renderPathPresetOptions();
         laneDelayInput.value = laneDelay(path).toFixed(2);
@@ -3651,8 +3683,8 @@ html>body{padding:0}</style>
         nodeCountOutput.textContent = `節點 ${nodeTotal} / 10`;
         deletePathNodeButton.disabled = selectedPathPointIndex === 0 || selectedPathPointIndex === path.points.length - 1;
         addPathNodeButton.disabled = nodeTotal >= 10;
-        deleteTrajectoryButton.disabled = trajectoryPaths.length <= 1;
-        deleteTrajectoryButton.title = trajectoryPaths.length <= 1 ? '至少需要保留一條彈道' : `刪除彈道 ${selectedTrajectoryIndex + 1}`;
+        deleteTrajectoryButton.disabled = false;
+        deleteTrajectoryButton.title = `刪除彈道 ${selectedTrajectoryIndex + 1}`;
         renderTrajectorySidebar();
       }
 
@@ -3829,7 +3861,7 @@ html>body{padding:0}</style>
       }
 
       function drawTrajectoryShapePreview() {
-        if (!trajectoryPreviewCanvas || !trajectoryPaths.length) return;
+        if (!trajectoryPreviewCanvas) return;
         const rect = trajectoryPreviewCanvas.getBoundingClientRect();
         const width = Math.max(240, Math.round(rect.width || 320));
         const height = Math.max(140, Math.round(rect.height || 168));
@@ -3842,6 +3874,17 @@ html>body{padding:0}</style>
         trajectoryPreviewCtx.clearRect(0, 0, width, height);
         trajectoryPreviewCtx.fillStyle = '#0d141d';
         trajectoryPreviewCtx.fillRect(0, 0, width, height);
+        if (!trajectoryPaths.length) {
+          trajectoryPreviewCtx.fillStyle = '#718096';
+          trajectoryPreviewCtx.font = '600 14px system-ui';
+          trajectoryPreviewCtx.textAlign = 'center';
+          trajectoryPreviewCtx.textBaseline = 'middle';
+          trajectoryPreviewCtx.fillText('尚未新增軌道', width / 2, height / 2);
+          trajectoryPreviewCtx.textAlign = 'start';
+          trajectoryPreviewCtx.textBaseline = 'alphabetic';
+          if (trajectoryPreviewMeta) trajectoryPreviewMeta.textContent = '0 條軌道｜按「新增軌道」開始';
+          return;
+        }
 
         const scriptPath = selectedTrajectoryScriptPath();
         const entries = trajectoryPreviewScope === 'all'
@@ -6084,17 +6127,40 @@ html>body{padding:0}</style>
         renderTrajectoryControls();
         draw();
       });
-      deleteTrajectoryButton.addEventListener('click', () => {
-        if (trajectoryPaths.length <= 1) return;
-        trajectoryPaths.splice(selectedTrajectoryIndex, 1);
+
+      function addTrajectory() {
+        if (trajectoryPaths.length >= 9) return;
+        trajectoryCountInput.value = String(trajectoryPaths.length + 1);
+        trajectoryPaths.push(createTrajectoryPath(trajectoryPaths.length));
         trajectoryPaths.forEach((path, index) => { path.id = index + 1; });
-        trajectoryCountInput.value = String(trajectoryPaths.length);
-        selectedTrajectoryIndex = clamp(selectedTrajectoryIndex, 0, trajectoryPaths.length - 1);
+        selectedTrajectoryIndex = trajectoryPaths.length - 1;
         selectedPathPointIndex = 0;
         renderTrajectoryControls();
         renderEventTrack();
         draw();
-      });
+        saveEditorState();
+        scheduleProjectAutosave();
+      }
+
+      function removeSelectedTrajectory() {
+        if (!trajectoryPaths.length) return;
+        trajectoryPaths.splice(selectedTrajectoryIndex, 1);
+        trajectoryPaths.forEach((path, index) => { path.id = index + 1; });
+        trajectoryCountInput.value = String(trajectoryPaths.length);
+        selectedTrajectoryIndex = trajectoryPaths.length
+          ? clamp(selectedTrajectoryIndex, 0, trajectoryPaths.length - 1)
+          : 0;
+        selectedPathPointIndex = 0;
+        renderTrajectoryControls();
+        renderEventTrack();
+        draw();
+        saveEditorState();
+        scheduleProjectAutosave();
+      }
+
+      addTrajectoryButton.addEventListener('click', addTrajectory);
+      removeTrajectoryButton.addEventListener('click', removeSelectedTrajectory);
+      deleteTrajectoryButton.addEventListener('click', removeSelectedTrajectory);
 
       function anchorPointerPosition(pointerEvent) {
         const rect = anchorCanvas.getBoundingClientRect();
@@ -6262,6 +6328,7 @@ html>body{padding:0}</style>
         hitEffectActive = false;
         defaultPoints();
         trajectoryPaths = [];
+        trajectoryCountInput.value = '0';
         selectedTrajectoryIndex = 0;
         selectedPathPointIndex = 0;
         ensureTrajectoryPaths();
@@ -6753,7 +6820,7 @@ html>body{padding:0}</style>
             y: Number(anchor.y.toFixed(4))
           })),
           coordinateSpace: 'NormalizedBottomLeft',
-          controlPoints: trajectoryPaths[0].points.map((p, i) => ({
+          controlPoints: (trajectoryPaths[0]?.points || []).map((p, i) => ({
             index: i,
             x: Number((p.x / w).toFixed(5)),
             y: Number((1 - p.y / h).toFixed(5))
@@ -7760,9 +7827,9 @@ html>body{padding:0}</style>
               displayName: character.displayName,
               position: { x: .5, y: .5 }
             }, nextModelId);
-        model.trajectories = Array.isArray(modelPreviewDraft.trajectories) && modelPreviewDraft.trajectories.length
+        model.trajectories = Array.isArray(modelPreviewDraft.trajectories)
           ? modelPreviewDraft.trajectories.map((path, index) => normalizeTrajectoryPath(path, index))
-          : [normalizeTrajectoryPath(createTrajectoryPath(0), 0)];
+          : [];
         model.anchors = JSON.parse(JSON.stringify(modelPreviewDraft.anchors || defaultAnchors));
         model.targetAnchors = JSON.parse(JSON.stringify(modelPreviewDraft.targetAnchors || defaultAnchors));
         modelInstances.push(model);
