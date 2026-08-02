@@ -1860,6 +1860,7 @@ html>body{padding:0}</style>
       let nextModelId = 1;
       let modelPanelController = null;
       let modelPreviewDraft = null;
+      let modelPreviewChosen = false;
       let modelPlaybackFrame = 0;
       let modelPlaybackLastTime = 0;
       let previewMode = false;
@@ -7597,6 +7598,7 @@ html>body{padding:0}</style>
           function configureDraft(characterId) {
             const character = modelCharacterCatalog[characterId];
             paletteCharacterId = characterId;
+            modelPreviewChosen = true;
             storeCurrentTrajectoriesIntoSelectedModel();
             selectedModelId = null;
             modelPreviewDraft = sanitizeModelInstance({
@@ -7702,7 +7704,9 @@ html>body{padding:0}</style>
               button.type = 'button';
               button.className = 'ufe-model-card';
               button.disabled = entry.disabled;
-              const selected = entry.id === 'current' ? Boolean(current) : !current && entry.id === paletteCharacterId;
+              const selected = entry.id === 'current'
+                ? Boolean(current)
+                : !current && modelPreviewChosen && entry.id === paletteCharacterId;
               button.classList.toggle('is-selected', selected);
               button.setAttribute('aria-pressed', String(selected));
               button.innerHTML = '<canvas width="86" height="74"></canvas><span></span><small></small>';
@@ -7732,6 +7736,18 @@ html>body{padding:0}</style>
           }
 
           function renderPreview() {
+            if (!selectedModel() && !modelPreviewChosen) {
+              previewContext.setTransform(1, 0, 0, 1, 0, 0);
+              previewContext.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+              previewContext.fillStyle = '#718096';
+              previewContext.font = '600 14px system-ui';
+              previewContext.textAlign = 'center';
+              previewContext.textBaseline = 'middle';
+              previewContext.fillText('尚未選擇模型', previewCanvas.width / 2, previewCanvas.height / 2);
+              previewName.textContent = '未選擇模型';
+              previewAction.textContent = '請從下方選擇模型';
+              return;
+            }
             const target = activeTarget();
             const character = modelCharacterCatalog[target.characterId];
             previewContext.setTransform(1, 0, 0, 1, 0, 0);
@@ -7768,15 +7784,18 @@ html>body{padding:0}</style>
             const target = activeTarget();
             const character = modelCharacterCatalog[target.characterId];
             const hasSelectedModel = Boolean(selectedModel());
+            const hasPreviewTarget = hasSelectedModel || modelPreviewChosen;
             nameInput.value = target.characterId;
             typeInput.value = character.modelType || target.modelType || 'role';
             // These selectors also configure the preview draft before it is added to the canvas.
-            nameInput.disabled = false;
-            typeInput.disabled = false;
+            nameInput.disabled = !hasPreviewTarget;
+            typeInput.disabled = !hasPreviewTarget;
             xInput.disabled = !hasSelectedModel;
             yInput.disabled = !hasSelectedModel;
             deleteButton.disabled = !hasSelectedModel;
-            selectedMeta.textContent = hasSelectedModel ? `${target.id}｜${character.displayName}` : '預覽設定｜尚未新增到畫布';
+            selectedMeta.textContent = hasSelectedModel
+              ? `${target.id}｜${character.displayName}`
+              : modelPreviewChosen ? '預覽設定｜尚未新增到畫布' : '尚未選擇模型';
             syncPosition();
             scaleRange.value = String(Math.round(target.scale * 100));
             scaleNumber.value = String(Math.round(target.scale * 100));
@@ -7785,8 +7804,15 @@ html>body{padding:0}</style>
             loopInput.checked = target.loop;
             speedInput.value = String(target.playbackSpeed);
             populateActions(target);
-            addButton.disabled = !character.available;
-            availability.textContent = character.available
+            [scaleRange, scaleNumber, flipInput, groupInput, actionInput, loopInput, speedInput, resetButton]
+              .forEach(control => { control.disabled = !hasPreviewTarget; });
+            modelSection.querySelectorAll('[data-model-scale], [data-model-play]').forEach(button => {
+              if (!hasPreviewTarget) button.disabled = true;
+            });
+            addButton.disabled = !modelPreviewChosen || !character.available;
+            availability.textContent = !modelPreviewChosen
+              ? '請先從模型卡片選擇要使用的模型'
+              : character.available
               ? `${character.displayName}｜可新增到畫布`
               : `${character.displayName}尚未提供模型素材，暫時無法新增`;
             renderCards();
@@ -7818,6 +7844,7 @@ html>body{padding:0}</style>
       }
 
           addButton.addEventListener('click', () => {
+            if (!modelPreviewChosen) return;
             const character = modelCharacterCatalog[modelPreviewDraft.characterId];
             if (!character.available) return;
             const id = `model_${String(nextModelId++).padStart(3, '0')}`;
@@ -7990,9 +8017,16 @@ html>body{padding:0}</style>
             if (!model) return;
             modelInstances = modelInstances.filter(item => item.id !== model.id);
             selectedModelId = null;
-            configureDraft(model.characterId);
+            modelPreviewChosen = false;
+            trajectoryPaths = [];
+            trajectoryCountInput.value = '0';
+            selectedTrajectoryIndex = 0;
+            selectedPathPointIndex = 0;
             saveEditorState();
             renderCollisionControls();
+            renderTrajectoryControls();
+            render();
+            draw();
           });
 
           const controller = { render, renderPreview, syncPosition, syncPlaybackState, selectModel, openPanel: null };
