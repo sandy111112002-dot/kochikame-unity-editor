@@ -5920,9 +5920,9 @@ html>body{padding:0}</style>
           const isEndpoint = pointIndex === path.points.length - 1;
           return Math.hypot(point.x - p.x, point.y - p.y) < (isEndpoint ? 30 : 22);
         }) ?? -1;
-        const isDirectEndpointHit = index === (path?.points.length || 0) - 1
+        const isDirectEndpointHit = Boolean(path) && index === path.points.length - 1
           && Math.hypot(path.points[index].x - p.x, path.points[index].y - p.y) <= 12;
-        const isDirectStartHit = index === 0
+        const isDirectStartHit = Boolean(path) && index === 0
           && Math.hypot(path.points[0].x - p.x, path.points[0].y - p.y) <= 12;
         const isDirectPathPointHit = index >= 0
           && Math.hypot(path.points[index].x - p.x, path.points[index].y - p.y) <= 12;
@@ -7825,8 +7825,11 @@ html>body{padding:0}</style>
             populateActions(target);
             [scaleRange, scaleNumber, flipInput, groupInput, actionInput, loopInput, speedInput, resetButton]
               .forEach(control => { control.disabled = !hasPreviewTarget; });
-            modelSection.querySelectorAll('[data-model-scale], [data-model-play]').forEach(button => {
-              if (!hasPreviewTarget) button.disabled = true;
+            modelSection.querySelectorAll('[data-model-scale]').forEach(button => {
+              button.disabled = !hasPreviewTarget;
+            });
+            modelSection.querySelectorAll('[data-model-play]').forEach(button => {
+              button.disabled = !hasPreviewTarget || !actionAvailable(target);
             });
             addButton.disabled = !modelPreviewChosen || !character.available;
             availability.textContent = !modelPreviewChosen
