@@ -2816,7 +2816,7 @@ html>body{padding:0}</style>
       const effectSelectorRecentKey = 'unity-flight-editor-effect-recents-v1';
 
       function clearLegacyDefaultEffects(eventList, defaultsVersion) {
-        if (Number(defaultsVersion) >= 2) return;
+        if (Number(defaultsVersion) >= 4) return;
         const legacyDefaults = {
           e1: { time: .37, effect: 'fx_fire_long' },
           e2: { time: .55, effect: 'fx_ice_long' },
@@ -2835,7 +2835,7 @@ html>body{padding:0}</style>
       }
 
       function removeLegacySeedEvents(eventList, defaultsVersion) {
-        if (Number(defaultsVersion) >= 3) return eventList;
+        if (Number(defaultsVersion) >= 4) return eventList;
         return eventList.filter(event => {
           const common = !event.params && (event.effectScale == null || Number(event.effectScale) === 1);
           if (!common) return true;
@@ -2882,8 +2882,8 @@ html>body{padding:0}</style>
         try {
           localStorage.setItem(editorStorageKey, JSON.stringify({
             version: 1,
-            effectDefaultsVersion: 2,
-            eventDefaultsVersion: 3,
+            effectDefaultsVersion: 4,
+            eventDefaultsVersion: 4,
             events,
             selectedEventId,
             nextEventId,
@@ -6530,11 +6530,11 @@ html>body{padding:0}</style>
           characterId: detailActionTarget()?.characterId || 'ryotsu',
           animationId: detailActionTarget()?.animationId || selectedAttackAnimation,
           params: '',
-          flightEffect: source?.flightEffect || 'none',
-          effectScale: source?.effectScale || 1,
+          flightEffect: 'none',
+          effectScale: 1,
           linkPoint: source?.linkPoint || 'L06',
-          hitEffectId: source?.hitEffectId || 'none',
-          hitEffectScale: source?.hitEffectScale || 1
+          hitEffectId: 'none',
+          hitEffectScale: 1
         };
         events.push(event);
         selectedDetailActionEventId = event.id;
