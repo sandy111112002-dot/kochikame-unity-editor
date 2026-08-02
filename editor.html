@@ -1879,9 +1879,9 @@ html>body{padding:0}</style>
       let collisionImpact = null;
       let collisionImpacts = [];
       let events = [
-        { id: 1, type: 'e1', time: .37, params: '', flightEffect: 'fx_fire_long', effectScale: 1, linkPoint: 'L06' },
-        { id: 2, type: 'e2', time: .55, params: '', flightEffect: 'fx_ice_long', effectScale: 1, linkPoint: 'L06' },
-        { id: 3, type: 'fe', time: .45, params: '', flightEffect: 'fx_fire_short', effectScale: 1, linkPoint: 'L06' },
+        { id: 1, type: 'e1', time: .37, params: '', flightEffect: 'none', effectScale: 1, linkPoint: 'L06' },
+        { id: 2, type: 'e2', time: .55, params: '', flightEffect: 'none', effectScale: 1, linkPoint: 'L06' },
+        { id: 3, type: 'fe', time: .45, params: '', flightEffect: 'none', effectScale: 1, linkPoint: 'L06' },
         { id: 4, type: 'hit', time: .62, params: '', flightEffect: '', hitEffectId: 'hit_001', hitEffectScale: 1 }
       ];
       let selectedEventId = 1;
@@ -2811,6 +2811,25 @@ html>body{padding:0}</style>
       const effectSelectorInstances = new Map();
       const effectSelectorRecentKey = 'unity-flight-editor-effect-recents-v1';
 
+      function clearLegacyDefaultEffects(eventList, defaultsVersion) {
+        if (Number(defaultsVersion) >= 2) return;
+        const legacyDefaults = {
+          e1: { time: .37, effect: 'fx_fire_long' },
+          e2: { time: .55, effect: 'fx_ice_long' },
+          fe: { time: .45, effect: 'fx_fire_short' }
+        };
+        eventList.forEach(event => {
+          const legacy = legacyDefaults[event.type];
+          if (
+            legacy &&
+            Math.abs(Number(event.time) - legacy.time) < .001 &&
+            event.flightEffect === legacy.effect &&
+            !event.params &&
+            (event.effectScale == null || Number(event.effectScale) === 1)
+          ) event.flightEffect = 'none';
+        });
+      }
+
       function ensureRequiredEvents() {
         if (!events.some(event => event.type === 'fe')) {
           events.push({
@@ -2818,7 +2837,7 @@ html>body{padding:0}</style>
             type: 'fe',
             time: Number(Math.min(.45, attackBaseDuration).toFixed(2)),
             params: '',
-            flightEffect: 'fx_fire_short',
+            flightEffect: 'none',
             effectScale: 1,
             linkPoint: 'L06'
           });
@@ -2868,6 +2887,7 @@ html>body{padding:0}</style>
         try {
           localStorage.setItem(editorStorageKey, JSON.stringify({
             version: 1,
+            effectDefaultsVersion: 2,
             events,
             selectedEventId,
             nextEventId,
@@ -2897,6 +2917,7 @@ html>body{padding:0}</style>
               ? event.linkPoint
               : event.linkPoint === 'L03' ? 'L04' : 'L01'
           }));
+          clearLegacyDefaultEffects(events, saved.effectDefaultsVersion);
           selectedEventId = events.some(event => event.id === Number(saved.selectedEventId))
             ? Number(saved.selectedEventId)
             : events[0]?.id;
@@ -2968,6 +2989,7 @@ html>body{padding:0}</style>
         return {
           format: 'UnityFlightEditorProject',
           version: 1,
+          effectDefaultsVersion: 2,
           savedAt: new Date().toISOString(),
           controls: {
             pathType: trajectoryPathType(trajectoryPaths[selectedTrajectoryIndex]),
@@ -3036,6 +3058,7 @@ html>body{padding:0}</style>
         attackSpeedInput.value = controls.attackSpeed ?? attackSpeedInput.value;
         hitSpeedInput.value = controls.hitSpeed ?? hitSpeedInput.value;
         if (Array.isArray(state.events)) events = JSON.parse(JSON.stringify(state.events));
+        clearLegacyDefaultEffects(events, state.effectDefaultsVersion);
         selectedEventId = Number(state.selectedEventId) || events[0]?.id;
         ensureUniqueEventIds();
         nextEventId = Math.max(nextEventId, Number(state.nextEventId) || 1);
@@ -4397,8 +4420,8 @@ html>body{padding:0}</style>
       }
 
       function drawProjectile(p, angle, c, event = launchEvent()) {
-        if (event?.effectEnabled === false || event?.flightEffect === 'none') return;
-        const image = sprites[effectSpriteKeyMap[event?.flightEffect] || 'flightFireLong'];
+        if (event?.effectEnabled === false || !event?.flightEffect || event.flightEffect === 'none') return;
+        const image = sprites[effectSpriteKeyMap[event.flightEffect]];
         if (image && image.complete && image.naturalWidth) {
           const isStandaloneTop = isStandaloneSpinningTopEffect(event?.flightEffect);
           const isTopCombat = isTopCombatEffect(event?.flightEffect);
@@ -4436,13 +4459,13 @@ html>body{padding:0}</style>
       }
 
       function drawLaunchEffect(event, eventElapsed, c) {
-        if (event?.effectEnabled === false || event?.flightEffect === 'none') return;
+        if (event?.effectEnabled === false || !event?.flightEffect || event.flightEffect === 'none') return;
         const launchWindow = .45;
         if (eventElapsed < 0 || eventElapsed > launchWindow) return;
         const origin = emissionOrigin(event);
         const ahead = pointOnLane(.015, 0, event);
         const angle = Math.atan2(ahead.y - origin.y, ahead.x - origin.x);
-        const image = sprites[effectSpriteKeyMap[event.flightEffect] || 'flightFireLong'];
+        const image = sprites[effectSpriteKeyMap[event.flightEffect]];
         const phase = clamp(eventElapsed / launchWindow, 0, 1);
         const userScale = clamp(event.effectScale || 1, .1, 4);
         const scale = (.82 + Math.sin(phase * Math.PI) * .48) * userScale;
@@ -4650,7 +4673,7 @@ html>body{padding:0}</style>
         eventTypeInput.value = event.type;
         eventTimeInput.value = event.time.toFixed(2);
         eventParamsInput.value = String(event.params ?? '');
-        flightEffectInput.value = event.flightEffect || 'fx_fire_long';
+        flightEffectInput.value = event.flightEffect || 'none';
         flightEffectSizeInput.value = event.effectScale || 1;
         renderEffectPreviews();
         linkPointInput.value = event.linkPoint || 'L06';
@@ -5004,10 +5027,10 @@ html>body{padding:0}</style>
         const e1 = events.find(event => event.type === 'e1');
         const e2 = events.find(event => event.type === 'e2');
         launch1TimeInput.value = (e1?.time ?? .37).toFixed(2);
-        launch1EffectInput.value = e1?.flightEffect || 'fx_fire_long';
+        launch1EffectInput.value = e1?.flightEffect || 'none';
         launch1SizeInput.value = e1?.effectScale || 1;
         launch2TimeInput.value = (e2?.time ?? .55).toFixed(2);
-        launch2EffectInput.value = e2?.flightEffect || 'fx_ice_long';
+        launch2EffectInput.value = e2?.flightEffect || 'none';
         launch2SizeInput.value = e2?.effectScale || 1;
         renderEffectPreviews();
       }
@@ -5020,7 +5043,7 @@ html>body{padding:0}</style>
           type: slotKey,
           time: slotKey === 'e1' ? .37 : .55,
           params: '',
-          flightEffect: slotKey === 'e1' ? 'fx_fire_long' : 'fx_ice_long',
+          flightEffect: 'none',
           effectScale: 1,
           linkPoint: events.find(item => item.type === 'e1')?.linkPoint || 'L06'
         };
@@ -5502,7 +5525,7 @@ html>body{padding:0}</style>
           drawLaunchEffect(event, eventElapsed, c);
         });
         flightEvents().forEach(event => {
-          if (event.effectEnabled === false || event.flightEffect === 'none') return;
+          if (event.effectEnabled === false || !event.flightEffect || event.flightEffect === 'none') return;
           for (let lane = 0; lane < trajectoryCount(); lane++) {
             const path = trajectoryPaths[lane] || trajectoryPaths[0];
             const eventElapsed = elapsedTime() - event.time / attackSpeed() - laneDelay(path);
@@ -6320,7 +6343,7 @@ html>body{padding:0}</style>
         event.type = eventTypeInput.value;
         event.params = defaults[event.type] ?? '';
         if (usesOriginPoint(event) && !event.flightEffect) {
-          event.flightEffect = 'fx_fire_long';
+          event.flightEffect = 'none';
           event.linkPoint = event.linkPoint || 'L06';
         }
         if (event.type === 'hit' && !event.hitEffectId) event.hitEffectId = 'hit_001';
@@ -6414,7 +6437,7 @@ html>body{padding:0}</style>
           characterId: detailActionTarget()?.characterId || 'ryotsu',
           animationId: detailActionTarget()?.animationId || selectedAttackAnimation,
           params: '',
-          flightEffect: source?.flightEffect || 'fx_fire_long',
+          flightEffect: source?.flightEffect || 'none',
           effectScale: source?.effectScale || 1,
           linkPoint: source?.linkPoint || 'L06',
           hitEffectId: source?.hitEffectId || 'hit_001',
