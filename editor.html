@@ -1438,7 +1438,7 @@ html>body{padding:0}</style>
     <canvas id="ufe-canvas" aria-label="2D 飛行軌道編輯區；拖曳節點可修改軌道"></canvas>
     <span class="ufe-badge">編輯畫布｜拖曳角色與節點｜縮放 100%</span>
     <div class="ufe-stage-status">
-      <span class="viz-badge">新彈道起點讀取錨點</span>
+      <span class="viz-badge">軌道起點跟隨角色發射錨點</span>
       <span class="viz-badge">最多 10 節點</span>
     </div>
   </div>
@@ -1708,7 +1708,7 @@ html>body{padding:0}</style>
     </div>
   </details>
 
-  <p id="ufe-help" class="ufe-help">每條彈道起點會同步讀取飛行特效起點；選擇彈道後，可拖曳終點或新增節點調整曲線。</p>
+  <p id="ufe-help" class="ufe-help">每條彈道起點會跟隨角色的飛行特效錨點；選擇彈道後，可拖曳終點或新增節點調整曲線。</p>
 
   <script src="./shared-flight-runtime.js"></script>
   <script>
@@ -3943,6 +3943,17 @@ html>body{padding:0}</style>
         };
       }
 
+      function syncTrajectoryOrigins() {
+        // 沒有角色模型時保留軌道原始起點，避免套用隱藏預設角色的底部座標。
+        if (!roleAnchorModel()) return;
+        trajectoryPaths.forEach((path, index) => {
+          if (!path?.points?.length) return;
+          const origin = emissionOrigin(displayFlightEvent());
+          const offset = (index - (trajectoryPaths.length - 1) / 2) * 18;
+          path.points[0] = { ...path.points[0], x: origin.x, y: origin.y + offset, role: 'start' };
+        });
+      }
+
       function resizeAnchorCanvas() {
         const rect = anchorCanvas.getBoundingClientRect();
         anchorDpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -5449,6 +5460,7 @@ html>body{padding:0}</style>
       function draw() {
         if (!points.length) return;
         constrainTrajectoryPaths();
+        syncTrajectoryOrigins();
         const w = canvas.clientWidth, h = canvas.clientHeight;
         const c = colors();
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -6472,7 +6484,7 @@ html>body{padding:0}</style>
         }
         renderPathPresetOptions();
         help.textContent = pathSelect.value === 'nodes'
-          ? '新建彈道會讀取阿兩飛行特效錨點；建立後可獨立拖曳起點、角色、終點與最多 10 個節點。'
+          ? '彈道起點會跟隨角色的飛行特效錨點；可拖曳角色、終點與最多 10 個節點。'
           : pathSelect.value === 'bezier'
           ? '藍色為起點、橘色為終點；拖曳兩個控制點可塑造彎曲軌道。'
           : pathSelect.value === 'parabola'
