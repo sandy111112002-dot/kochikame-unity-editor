@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>陀螺碰撞追擊編輯器</title>
+  <style>
+    :root{color-scheme:dark;--bg:#09111c;--panel:#111d2b;--line:#29415c;--text:#eaf3ff;--muted:#8fa4bb;--cyan:#38c9e8;--orange:#ff9f43;--pink:#ff6584;--green:#54d68b}
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(145deg,#07101a,#101b2a);color:var(--text);font:14px system-ui,-apple-system,"Noto Sans TC",sans-serif;height:100vh;overflow:hidden}
+    button,input,select{font:inherit} button,.file-button{border:1px solid #365778;background:#172a3e;color:var(--text);border-radius:7px;padding:8px 12px;cursor:pointer}button:hover,.file-button:hover{border-color:var(--cyan)}button.primary{background:#087d99;border-color:#27c1e2;font-weight:700}button.danger{color:#ffc4ce}.app{height:100%;display:grid;grid-template-rows:auto 1fr auto}.topbar{height:58px;display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--line);background:#0b1623}.title{margin-right:auto}.title strong{font-size:17px}.title small{display:block;color:var(--muted);margin-top:2px}.workspace{min-height:0;display:grid;grid-template-columns:280px minmax(420px,1fr) 300px}.panel{overflow:auto;background:rgba(17,29,43,.96);padding:13px;border-right:1px solid var(--line)}.panel.right{border-right:0;border-left:1px solid var(--line)}h2{font-size:13px;margin:4px 0 12px;color:#bfefff;letter-spacing:.08em}fieldset{border:1px solid var(--line);border-radius:9px;margin:0 0 12px;padding:10px}legend{color:var(--cyan);padding:0 6px}.field{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center;margin:8px 0}.field label{color:#bdcbd9}.field input,.field select{width:100%;min-width:0;background:#091421;color:var(--text);border:1px solid #35516e;border-radius:6px;padding:6px}.checkbox{display:flex;gap:8px;align-items:center;color:#bdcbd9}.checkbox input{accent-color:var(--cyan)}.stage-wrap{position:relative;min-width:0;min-height:0;background:#060d15}.stage-wrap canvas{display:block;width:100%;height:100%;touch-action:none}.hint{position:absolute;left:14px;top:13px;padding:7px 10px;border:1px solid #29445f;background:#08131fdd;border-radius:7px;color:#a9b9c9;pointer-events:none}.badge{position:absolute;right:14px;top:13px;padding:6px 10px;border-radius:99px;background:#16283a;color:var(--green);border:1px solid #31536d}.event-list{display:grid;gap:7px}.event{border-left:3px solid var(--cyan);padding:8px 9px;background:#0a1521;border-radius:5px;color:#c9d7e5}.event.hit{border-color:var(--pink)}.event.turn{border-color:var(--orange)}.event small{display:block;color:var(--muted);margin-top:2px}.statusbar{height:70px;padding:9px 14px;border-top:1px solid var(--line);background:#0a1521}.timeline{position:relative;height:12px;background:#20344a;border-radius:99px;overflow:hidden}.timeline>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--orange),var(--pink))}.readout{display:flex;justify-content:space-between;color:var(--muted);margin-top:7px}.log{min-height:38px;padding:8px;border-radius:6px;background:#08131e;color:#9db1c5;line-height:1.5}.swatch{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}.file-button input{display:none}@media(max-width:900px){body{overflow:auto}.app{height:auto;min-height:100vh}.workspace{grid-template-columns:1fr}.panel,.panel.right{border:0;border-bottom:1px solid var(--line)}.stage-wrap{height:520px}.statusbar{position:sticky;bottom:0}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="title"><strong>陀螺碰撞追擊編輯器</strong><small>獨立實驗版｜不影響原始飛行軌道編輯器</small></div>
+    <button id="reset">重設場景</button>
+    <label class="file-button">匯入 JSON<input id="import-file" type="file" accept="application/json"></label>
+    <button id="export">匯出 JSON</button>
+    <button id="play" class="primary">▶ 播放</button>
+  </header>
+  <main class="workspace">
+    <aside class="panel">
+      <h2>碰撞與追擊參數</h2>
+      <fieldset><legend>陀螺</legend>
+        <div class="field"><label for="speed">飛行速度</label><input id="speed" type="number" min="80" max="900" step="10" value="360"></div>
+        <div class="field"><label for="top-radius">碰撞半徑</label><input id="top-radius" type="number" min="5" max="80" value="18"></div>
+        <div class="field"><label for="launch-delay">發射延遲</label><input id="launch-delay" type="number" min="0" max="3" step="0.05" value="0.35"></div>
+      </fieldset>
+      <fieldset><legend>第一次碰撞：博士</legend>
+        <div class="field"><label for="doctor-radius">博士半徑</label><input id="doctor-radius" type="number" min="15" max="120" value="46"></div>
+        <div class="field"><label for="impact-pause">撞擊停頓</label><input id="impact-pause" type="number" min="0" max="1" step="0.01" value="0.10"></div>
+      </fieldset>
+      <fieldset><legend>急轉追擊：麗子</legend>
+        <div class="field"><label for="turn-time">急轉時間</label><input id="turn-time" type="number" min="0.05" max="1.5" step="0.01" value="0.28"></div>
+        <div class="field"><label for="turn-strength">轉彎幅度</label><input id="turn-strength" type="number" min="0" max="240" step="5" value="110"></div>
+        <div class="field"><label for="reiko-radius">麗子半徑</label><input id="reiko-radius" type="number" min="15" max="120" value="44"></div>
+        <div class="field"><label for="finish">命中後</label><select id="finish"><option value="stop">停止</option><option value="pass">穿透飛出</option></select></div>
+      </fieldset>
+      <label class="checkbox"><input id="show-colliders" type="checkbox" checked>顯示碰撞範圍</label>
+      <label class="checkbox"><input id="show-path" type="checkbox" checked>顯示預測路徑</label>
+    </aside>
+    <section class="stage-wrap">
+      <canvas id="stage"></canvas>
+      <div class="hint">拖曳阿兩、博士或麗子調整位置</div>
+      <div id="state-badge" class="badge">編輯中</div>
+    </section>
+    <aside class="panel right">
+      <h2>演出流程</h2>
+      <div class="event-list">
+        <div class="event"><b>1　阿兩發射陀螺</b><small>陀螺朝博士飛行</small></div>
+        <div class="event hit"><b>2　碰撞博士</b><small>觸發受擊、震動與撞擊火花</small></div>
+        <div class="event turn"><b>3　急轉鎖定麗子</b><small>沿貝茲曲線保留慣性再轉向</small></div>
+        <div class="event hit"><b>4　碰撞麗子</b><small>中斷加油，播放受擊反應</small></div>
+      </div>
+      <h2 style="margin-top:18px">碰撞紀錄</h2>
+      <div id="log" class="log">準備完成。按播放測試。</div>
+      <h2 style="margin-top:18px">操作說明</h2>
+      <p style="color:var(--muted);line-height:1.7;margin:0">播放途中按暫停可檢查碰撞位置。修改參數或拖曳人物後，再次播放會從頭計算。JSON 只屬於這個新版編輯器。</p>
+    </aside>
+  </main>
+  <footer class="statusbar">
+    <div class="timeline"><i id="timeline-fill"></i></div>
+    <div class="readout"><span id="time">0.00 秒</span><span><i class="swatch" style="background:var(--cyan)"></i>飛行　<i class="swatch" style="background:var(--orange)"></i>急轉　<i class="swatch" style="background:var(--pink)"></i>碰撞</span></div>
+  </footer>
+</div>
+<script src="./shared-flight-runtime.js"></script>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.querySelector('#stage'), ctx = canvas.getContext('2d');
+  const $ = id => document.getElementById(id);
+  const inputs = ['speed','top-radius','launch-delay','doctor-radius','impact-pause','turn-time','turn-strength','reiko-radius','finish','show-colliders','show-path'];
+  const imageSources = {
+    ryotsu:'assets/characters/ryotsu/idle/idle.png', doctor:'assets/characters/doctor/idle/idle.png',
+    reiko:'assets/characters/reiko/idle/idle.png', top:'assets/effects/spinning-top/base/fx_spinning_top_01.png',
+    doctorHit:'assets/characters/doctor/animations/hit/static.png'
+  };
+  const images = {};
+  for (const [key,src] of Object.entries(imageSources)) { const img=new Image(); img.src=src; img.onload=draw; images[key]=img; }
+  const defaults = {actors:{ryotsu:{x:.14,y:.74},doctor:{x:.55,y:.66},reiko:{x:.84,y:.72}}};
+  let actors, projectile, playing=false, paused=false, elapsed=0, durationEstimate=4, dragged=null, shake=0, flash=null, playbackClock=null, previousClockTime=0;
+  const numeric = id => Number($(id).value);
+  const config = () => ({speed:numeric('speed'),topRadius:numeric('top-radius'),launchDelay:numeric('launch-delay'),doctorRadius:numeric('doctor-radius'),impactPause:numeric('impact-pause'),turnTime:numeric('turn-time'),turnStrength:numeric('turn-strength'),reikoRadius:numeric('reiko-radius'),finish:$('finish').value,showColliders:$('show-colliders').checked,showPath:$('show-path').checked});
+  function resetActors(){ actors=structuredClone(defaults.actors); resetPlayback(); }
+  function resetPlayback(){ playing=false;if(playbackClock)playbackClock.stop();paused=false;elapsed=0;previousClockTime=0;shake=0;flash=null;projectile={phase:'waiting',x:0,y:0,prevX:0,prevY:0,vx:0,vy:0,phaseTime:0,hitDoctor:false,hitReiko:false,turn:null};$('play').textContent='▶ 播放';$('state-badge').textContent='編輯中';$('log').textContent='準備完成。按播放測試。';updateReadout();draw(); }
+  function resize(){const r=canvas.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1);canvas.width=Math.round(r.width*d);canvas.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);draw()}
+  const size=()=>({w:canvas.clientWidth,h:canvas.clientHeight}); const world=id=>{const s=size(),a=actors[id];return{x:a.x*s.w,y:a.y*s.h}};
+  function sprite(img,x,y,h,flip=false){if(!img.complete||!img.naturalWidth)return;const w=h*img.naturalWidth/img.naturalHeight;ctx.save();ctx.translate(x,y);if(flip)ctx.scale(-1,1);ctx.drawImage(img,-w/2,-h*.82,w,h);ctx.restore()}
+  function circle(p,r,color,label){ctx.save();ctx.strokeStyle=color;ctx.fillStyle=color+'18';ctx.setLineDash([6,5]);ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.setLineDash([]);ctx.font='12px system-ui';ctx.fillStyle=color;ctx.fillText(label,p.x-r,p.y-r-7);ctx.restore()}
+  function quad(a,b,c,t){const m=1-t;return{x:m*m*a.x+2*m*t*b.x+t*t*c.x,y:m*m*a.y+2*m*t*b.y+t*t*c.y}}
+  function predictedControl(){const d=world('doctor'),r=world('reiko'),a=world('ryotsu'),strength=numeric('turn-strength');const dx=d.x-a.x,dy=d.y-a.y,len=Math.hypot(dx,dy)||1;return{x:d.x+dx/len*strength,y:d.y+dy/len*strength-(r.y-d.y)*.12}}
+  function path(){const a=world('ryotsu'),d=world('doctor'),r=world('reiko'),c=predictedControl();ctx.save();ctx.lineWidth=2;ctx.setLineDash([7,6]);ctx.strokeStyle='#38c9e8aa';ctx.beginPath();ctx.moveTo(a.x,a.y-35);ctx.lineTo(d.x,d.y);ctx.stroke();ctx.strokeStyle='#ff9f43cc';ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.quadraticCurveTo(c.x,c.y,r.x,r.y);ctx.stroke();ctx.restore()}
+  function draw(){const {w,h}=size();if(!w)return;ctx.setTransform(devicePixelRatio>2?2:devicePixelRatio||1,0,0,devicePixelRatio>2?2:devicePixelRatio||1,0,0);ctx.clearRect(0,0,w,h);ctx.fillStyle='#07111c';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#173047';ctx.lineWidth=1;for(let x=0;x<w;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}ctx.fillStyle='#142536';ctx.fillRect(0,h*.78,w,h*.22);ctx.strokeStyle='#31516c';ctx.beginPath();ctx.moveTo(0,h*.78);ctx.lineTo(w,h*.78);ctx.stroke();if(config().showPath)path();const a=world('ryotsu'),d=world('doctor'),r=world('reiko');ctx.save();if(shake>0)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);sprite(images.ryotsu,a.x,a.y,145,false);sprite(projectile.hitDoctor&&projectile.phase==='impactDoctor'?images.doctorHit:images.doctor,d.x,d.y,138,true);sprite(images.reiko,r.x,r.y,142,true);ctx.restore();ctx.fillStyle='#dbeeff';ctx.textAlign='center';ctx.fillText('阿兩',a.x,a.y+35);ctx.fillText('博士',d.x,d.y+35);ctx.fillText('麗子（加油中）',r.x,r.y+35);ctx.textAlign='start';if(config().showColliders){circle(d,config().doctorRadius,'#ff6584','博士碰撞框');circle(r,config().reikoRadius,'#ff6584','麗子碰撞框')}if(projectile.phase!=='waiting'&&projectile.phase!=='done'){ctx.save();ctx.translate(projectile.x,projectile.y);ctx.rotate(elapsed*18);const hTop=54,wTop=images.top.naturalHeight? hTop*images.top.naturalWidth/images.top.naturalHeight:54;if(images.top.complete)ctx.drawImage(images.top,-wTop/2,-hTop*.72,wTop,hTop);else{ctx.fillStyle='#55dfff';ctx.beginPath();ctx.arc(0,0,config().topRadius,0,Math.PI*2);ctx.fill()}ctx.restore();if(config().showColliders)circle(projectile,config().topRadius,'#38c9e8','')}if(flash){ctx.save();ctx.globalAlpha=Math.max(0,flash.life/.22);ctx.strokeStyle='#fff';ctx.lineWidth=5;for(let i=0;i<8;i++){const q=i*Math.PI/4;ctx.beginPath();ctx.moveTo(flash.x+Math.cos(q)*12,flash.y+Math.sin(q)*12);ctx.lineTo(flash.x+Math.cos(q)*34,flash.y+Math.sin(q)*34);ctx.stroke()}ctx.restore()}}
+  function start(){if(paused){paused=false;playing=true;$('play').textContent='Ⅱ 暫停';playbackClock.play();return}resetPlayback();playing=true;const a=world('ryotsu'),d=world('doctor'),dx=d.x-a.x,dy=d.y-a.y,len=Math.hypot(dx,dy)||1;projectile.x=a.x;projectile.y=a.y-35;projectile.vx=dx/len*config().speed;projectile.vy=dy/len*config().speed;projectile.phase='waiting';durationEstimate=Math.max(1,config().launchDelay+1.2+config().impactPause+config().turnTime+.5);playbackClock.setDuration(durationEstimate);previousClockTime=0;$('play').textContent='Ⅱ 暫停';$('state-badge').textContent='播放中';playbackClock.play()}
+  function segmentCircle(x1,y1,x2,y2,cx,cy,r){return UnifiedFlightRuntime.segmentCircle({x:x1,y:y1},{x:x2,y:y2},{x:cx,y:cy},r)}
+  function hit(name,p){flash={x:p.x,y:p.y,life:.22};shake=12;$('log').innerHTML+=`<br><b>${elapsed.toFixed(2)}s</b>｜碰撞${name}`}
+  function update(dt){const c=config();elapsed+=dt;projectile.phaseTime+=dt;if(flash)flash.life-=dt;shake=Math.max(0,shake-dt*70);if(projectile.phase==='waiting'){if(elapsed>=c.launchDelay){projectile.phase='toDoctor';projectile.phaseTime=0;$('log').textContent=`${elapsed.toFixed(2)}s｜阿兩發射陀螺`;}return}projectile.prevX=projectile.x;projectile.prevY=projectile.y;if(projectile.phase==='toDoctor'||projectile.phase==='pass'){projectile.x+=projectile.vx*dt;projectile.y+=projectile.vy*dt;if(projectile.phase==='toDoctor'){const d=world('doctor');if(segmentCircle(projectile.prevX,projectile.prevY,projectile.x,projectile.y,d.x,d.y,c.topRadius+c.doctorRadius)){projectile.x=d.x;projectile.y=d.y;projectile.phase='impactDoctor';projectile.phaseTime=0;projectile.hitDoctor=true;hit('博士',d);$('state-badge').textContent='命中博士';}}else if(projectile.x<-100||projectile.x>size().w+100||projectile.y<-100||projectile.y>size().h+100)finish();return}if(projectile.phase==='impactDoctor'){if(projectile.phaseTime>=c.impactPause){const d=world('doctor'),r=world('reiko'),control=predictedControl();projectile.turn={start:{x:d.x,y:d.y},control,end:{x:r.x,y:r.y}};projectile.phase='turn';projectile.phaseTime=0;$('log').innerHTML+=`<br><b>${elapsed.toFixed(2)}s</b>｜急轉鎖定麗子`;$('state-badge').textContent='急轉追擊';}return}if(projectile.phase==='turn'){const t=Math.min(1,projectile.phaseTime/c.turnTime),p=quad(projectile.turn.start,projectile.turn.control,projectile.turn.end,t);projectile.x=p.x;projectile.y=p.y;if(t>=1){const r=world('reiko'),prev=quad(projectile.turn.start,projectile.turn.control,projectile.turn.end,.96);projectile.vx=(r.x-prev.x)/.04;projectile.vy=(r.y-prev.y)/.04;projectile.hitReiko=true;hit('麗子',r);$('state-badge').textContent='命中麗子';if(c.finish==='stop'){projectile.phase='done';setTimeout(finish,350)}else{projectile.phase='pass';projectile.phaseTime=0}}}}
+  function finish(){playing=false;paused=false;if(playbackClock)playbackClock.pause();$('play').textContent='↻ 重播';$('state-badge').textContent='演出完成';projectile.phase='done';draw()}
+  function updateReadout(){durationEstimate=Math.max(1,config().launchDelay+1.2+config().impactPause+config().turnTime+.5);$('timeline-fill').style.width=`${Math.min(100,elapsed/durationEstimate*100)}%`;$('time').textContent=`${elapsed.toFixed(2)} 秒`}
+  function pointer(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+  canvas.addEventListener('pointerdown',e=>{if(playing)return;const p=pointer(e);for(const id of ['ryotsu','doctor','reiko']){const q=world(id);if(Math.hypot(p.x-q.x,p.y-q.y)<75){dragged=id;canvas.setPointerCapture(e.pointerId);break}}});
+  canvas.addEventListener('pointermove',e=>{if(!dragged)return;const p=pointer(e),s=size();actors[dragged].x=Math.max(.06,Math.min(.94,p.x/s.w));actors[dragged].y=Math.max(.15,Math.min(.88,p.y/s.h));draw()});canvas.addEventListener('pointerup',()=>dragged=null);canvas.addEventListener('pointercancel',()=>dragged=null);
+  playbackClock=UnifiedFlightRuntime.createClock({duration:durationEstimate,onUpdate:state=>{if(!playing)return;const priorTime=previousClockTime,dt=Math.min(.033,Math.max(0,state.time-priorTime));previousClockTime=state.time;elapsed=priorTime;update(dt);elapsed=state.time;draw();updateReadout()},onComplete:()=>finish()});
+  $('play').addEventListener('click',()=>{if(playing){playing=false;paused=true;playbackClock.pause();$('play').textContent='▶ 繼續';$('state-badge').textContent='已暫停'}else start()});$('reset').addEventListener('click',resetActors);
+  for(const id of inputs)$(id).addEventListener('input',()=>{if(playing)resetPlayback();else draw()});
+  $('export').addEventListener('click',()=>{const data=UnifiedFlightRuntime.fromCollisionEditor({formatName:'SpinningTopCollisionEditor',version:1,actors,config:config()});const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='陀螺碰撞追擊設定-v2.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)});
+  $('import-file').addEventListener('change',async e=>{try{const raw=JSON.parse(await e.target.files[0].text());const data=raw.formatName==='SpinningTopCollisionEditor'?raw:null;if(!data){const scene=UnifiedFlightRuntime.normalizeDocument(raw);if(scene.meta.source!=='SpinningTopCollisionEditor')throw Error('這份統一格式資料不是碰撞場景');actors=Object.fromEntries(scene.actors.map(actor=>[actor.id,actor.position]));const response=scene.collision.responses.find(item=>item.targetId==='doctor')||{};const finalResponse=scene.collision.responses.find(item=>item.targetId==='reiko')||{};raw.config={speed:scene.trajectories[0]?.speed||360,topRadius:scene.collision.projectileRadius,launchDelay:scene.trajectories[0]?.delay||0,doctorRadius:scene.collision.targets.find(item=>item.actorId==='doctor')?.radius,impactPause:response.pause,turnTime:response.turnDuration,turnStrength:response.turnStrength,reikoRadius:scene.collision.targets.find(item=>item.actorId==='reiko')?.radius,finish:finalResponse.type==='pass'?'pass':'stop',showColliders:true,showPath:true}}else actors=data.actors;const values=data?data.config:raw.config;const map={speed:'speed',topRadius:'top-radius',launchDelay:'launch-delay',doctorRadius:'doctor-radius',impactPause:'impact-pause',turnTime:'turn-time',turnStrength:'turn-strength',reikoRadius:'reiko-radius',finish:'finish',showColliders:'show-colliders',showPath:'show-path'};for(const [key,id] of Object.entries(map)){if(values[key]===undefined)continue;if($(id).type==='checkbox')$(id).checked=values[key];else $(id).value=values[key]}resetPlayback();$('log').textContent='JSON 匯入完成。'}catch(err){alert('無法匯入：'+err.message)}e.target.value=''});
+  window.addEventListener('resize',resize);resetActors();requestAnimationFrame(resize);
+})();
+</script>
+</body>
+</html>
