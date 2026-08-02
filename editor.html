@@ -3943,15 +3943,6 @@ html>body{padding:0}</style>
         };
       }
 
-      function syncTrajectoryOrigins() {
-        trajectoryPaths.forEach((path, index) => {
-          if (!path?.points?.length) return;
-          const origin = emissionOrigin(displayFlightEvent());
-          const offset = (index - (trajectoryPaths.length - 1) / 2) * 18;
-          path.points[0] = { ...path.points[0], x: origin.x, y: origin.y + offset, role: 'start' };
-        });
-      }
-
       function resizeAnchorCanvas() {
         const rect = anchorCanvas.getBoundingClientRect();
         anchorDpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -5458,7 +5449,6 @@ html>body{padding:0}</style>
       function draw() {
         if (!points.length) return;
         constrainTrajectoryPaths();
-        syncTrajectoryOrigins();
         const w = canvas.clientWidth, h = canvas.clientHeight;
         const c = colors();
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
