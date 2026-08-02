@@ -5911,6 +5911,7 @@ html>body{padding:0}</style>
 
       canvas.addEventListener('pointerdown', event => {
         if (previewMode) return;
+        event.preventDefault();
         const p = pointerPosition(event);
         const path = trajectoryPaths[selectedTrajectoryIndex];
         const character = characterAt(p);
@@ -5933,7 +5934,7 @@ html>body{padding:0}</style>
           selectedModelId = canvasModel.id;
           draggedModelId = canvasModel.id;
           modelPanelController?.selectModel(canvasModel.id);
-          canvas.setPointerCapture(event.pointerId);
+          try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
           canvas.style.cursor = 'grabbing';
           draw();
           return;
@@ -5966,17 +5967,21 @@ html>body{padding:0}</style>
         }
         draw();
       });
-      canvas.addEventListener('pointermove', event => {
+      function moveDraggedModel(event) {
         if (draggedModelId) {
           const model = modelInstances.find(item => item.id === draggedModelId);
-          if (!model) return;
+          if (!model) return false;
           const p = pointerPosition(event);
           model.position.x = clamp(p.x / Math.max(1, canvas.clientWidth), 0, 1);
           model.position.y = clamp(p.y / Math.max(1, canvas.clientHeight), 0, 1);
           modelPanelController?.syncPosition();
           draw();
-          return;
+          return true;
         }
+        return false;
+      }
+      canvas.addEventListener('pointermove', event => {
+        if (moveDraggedModel(event)) return;
         if (draggedCharacter) {
           const p = pointerPosition(event);
           const dx = p.x - draggedCharacter.lastX;
@@ -6016,6 +6021,16 @@ html>body{padding:0}</style>
       };
       canvas.addEventListener('pointerup', release);
       canvas.addEventListener('pointercancel', release);
+      // Keep a model drag alive even when an embedded browser does not retain
+      // pointer capture and the pointer briefly leaves the canvas.
+      window.addEventListener('pointermove', event => {
+        if (!draggedModelId || event.target === canvas) return;
+        event.preventDefault();
+        moveDraggedModel(event);
+      }, { passive: false });
+      window.addEventListener('pointerup', () => {
+        if (draggedModelId) release();
+      });
       canvas.addEventListener('wheel', event => {
         if (previewMode || zoomLocked) return;
         event.preventDefault();
