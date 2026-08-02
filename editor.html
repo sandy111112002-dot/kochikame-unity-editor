@@ -2847,6 +2847,11 @@ html>body{padding:0}</style>
         });
       }
 
+      function removeSavedDefaultEffectEvents(eventList, defaultsVersion) {
+        if (Number(defaultsVersion) >= 5) return eventList;
+        return eventList.filter(event => !['e1', 'e2', 'fe', 'hit'].includes(event.type));
+      }
+
       function ensureRequiredEvents() {
         if (!events.some(event => event.id === selectedEventId)) selectedEventId = events[0]?.id ?? null;
       }
@@ -2882,8 +2887,8 @@ html>body{padding:0}</style>
         try {
           localStorage.setItem(editorStorageKey, JSON.stringify({
             version: 1,
-            effectDefaultsVersion: 4,
-            eventDefaultsVersion: 4,
+            effectDefaultsVersion: 5,
+            eventDefaultsVersion: 5,
             events,
             selectedEventId,
             nextEventId,
@@ -2915,6 +2920,7 @@ html>body{padding:0}</style>
           }));
           clearLegacyDefaultEffects(events, saved.effectDefaultsVersion);
           events = removeLegacySeedEvents(events, saved.eventDefaultsVersion);
+          events = removeSavedDefaultEffectEvents(events, saved.eventDefaultsVersion);
           selectedEventId = events.some(event => event.id === Number(saved.selectedEventId))
             ? Number(saved.selectedEventId)
             : events[0]?.id;
