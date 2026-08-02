@@ -1878,15 +1878,10 @@ html>body{padding:0}</style>
       let activeCollisionTarget = null;
       let collisionImpact = null;
       let collisionImpacts = [];
-      let events = [
-        { id: 1, type: 'e1', time: .37, params: '', flightEffect: 'none', effectScale: 1, linkPoint: 'L06' },
-        { id: 2, type: 'e2', time: .55, params: '', flightEffect: 'none', effectScale: 1, linkPoint: 'L06' },
-        { id: 3, type: 'fe', time: .45, params: '', flightEffect: 'none', effectScale: 1, linkPoint: 'L06' },
-        { id: 4, type: 'hit', time: .62, params: '', flightEffect: '', hitEffectId: 'hit_001', hitEffectScale: 1 }
-      ];
-      let selectedEventId = 1;
+      let events = [];
+      let selectedEventId = null;
       let draggedEventId = null;
-      let nextEventId = 5;
+      let nextEventId = 1;
       const defaultAnchors = {
         L01: { x: 0, y: -.42 },
         L04: { x: .02, y: -.08 },
@@ -2830,30 +2825,21 @@ html>body{padding:0}</style>
         });
       }
 
+      function removeLegacySeedEvents(eventList, defaultsVersion) {
+        if (Number(defaultsVersion) >= 3) return eventList;
+        return eventList.filter(event => {
+          const common = !event.params && (event.effectScale == null || Number(event.effectScale) === 1);
+          if (!common) return true;
+          if (event.type === 'e1' && Math.abs(Number(event.time) - .37) < .001 && event.flightEffect === 'none') return false;
+          if (event.type === 'e2' && Math.abs(Number(event.time) - .55) < .001 && event.flightEffect === 'none') return false;
+          if (event.type === 'fe' && Math.abs(Number(event.time) - .45) < .001 && event.flightEffect === 'none') return false;
+          if (event.type === 'hit' && Math.abs(Number(event.time) - .62) < .001 && (!event.hitEffectId || event.hitEffectId === 'hit_001')) return false;
+          return true;
+        });
+      }
+
       function ensureRequiredEvents() {
-        if (!events.some(event => event.type === 'fe')) {
-          events.push({
-            id: nextEventId++,
-            type: 'fe',
-            time: Number(Math.min(.45, attackBaseDuration).toFixed(2)),
-            params: '',
-            flightEffect: 'none',
-            effectScale: 1,
-            linkPoint: 'L06'
-          });
-        }
-        if (!events.some(event => event.type === 'hit')) {
-          events.push({
-            id: nextEventId++,
-            type: 'hit',
-            time: Number(Math.min(.62, attackBaseDuration).toFixed(2)),
-            params: '',
-            flightEffect: '',
-            hitEffectId: 'hit_001',
-            hitEffectScale: 1
-          });
-        }
-        if (!events.some(event => event.id === selectedEventId)) selectedEventId = events[0].id;
+        if (!events.some(event => event.id === selectedEventId)) selectedEventId = events[0]?.id ?? null;
       }
 
       function ensureUniqueEventIds() {
@@ -2888,6 +2874,7 @@ html>body{padding:0}</style>
           localStorage.setItem(editorStorageKey, JSON.stringify({
             version: 1,
             effectDefaultsVersion: 2,
+            eventDefaultsVersion: 3,
             events,
             selectedEventId,
             nextEventId,
@@ -2918,6 +2905,7 @@ html>body{padding:0}</style>
               : event.linkPoint === 'L03' ? 'L04' : 'L01'
           }));
           clearLegacyDefaultEffects(events, saved.effectDefaultsVersion);
+          events = removeLegacySeedEvents(events, saved.eventDefaultsVersion);
           selectedEventId = events.some(event => event.id === Number(saved.selectedEventId))
             ? Number(saved.selectedEventId)
             : events[0]?.id;
@@ -2990,6 +2978,7 @@ html>body{padding:0}</style>
           format: 'UnityFlightEditorProject',
           version: 1,
           effectDefaultsVersion: 2,
+          eventDefaultsVersion: 3,
           savedAt: new Date().toISOString(),
           controls: {
             pathType: trajectoryPathType(trajectoryPaths[selectedTrajectoryIndex]),
@@ -3059,6 +3048,7 @@ html>body{padding:0}</style>
         hitSpeedInput.value = controls.hitSpeed ?? hitSpeedInput.value;
         if (Array.isArray(state.events)) events = JSON.parse(JSON.stringify(state.events));
         clearLegacyDefaultEffects(events, state.effectDefaultsVersion);
+        events = removeLegacySeedEvents(events, state.eventDefaultsVersion);
         selectedEventId = Number(state.selectedEventId) || events[0]?.id;
         ensureUniqueEventIds();
         nextEventId = Math.max(nextEventId, Number(state.nextEventId) || 1);
@@ -4731,10 +4721,27 @@ html>body{padding:0}</style>
       function effectEventForType(effectType) {
         const selected = selectedEvent();
         if (selected?.type === effectType) return selected;
-        if (effectType === 'e1' || effectType === 'e2') return ensureLaunchSlot(effectType);
-        ensureRequiredEvents();
         return events.find(event => event.type === effectType);
       }
+
+      function createEffectEvent(effectType) {
+        if (effectType === 'e1' || effectType === 'e2') return ensureLaunchSlot(effectType);
+        const event = {
+          id: nextEventId++,
+          type: effectType,
+          time: Number(Math.min(effectType === 'hit' ? .62 : .45, attackBaseDuration).toFixed(2)),
+          params: '',
+          flightEffect: 'none',
+          effectScale: 1,
+          linkPoint: 'L06',
+          hitEffectId: 'none',
+          hitEffectScale: 1
+        };
+        events.push(event);
+        return event;
+      }
+
+      const editableEffectEventForType = effectType => effectEventForType(effectType) || createEffectEvent(effectType);
 
       function effectAssetId(effectType, event = effectEventForType(effectType)) {
         if (!event) return 'none';
@@ -4782,7 +4789,7 @@ html>body{padding:0}</style>
       }
 
       function selectEffectAsset(effectType, assetId) {
-        const event = effectEventForType(effectType);
+        const event = editableEffectEventForType(effectType);
         if (!event) return;
         if (effectType === 'hit') event.hitEffectId = assetId;
         else event.flightEffect = assetId;
@@ -4797,7 +4804,7 @@ html>body{padding:0}</style>
       }
 
       function setEffectEnabled(effectType, enabled) {
-        const event = effectEventForType(effectType);
+        const event = enabled ? editableEffectEventForType(effectType) : effectEventForType(effectType);
         if (!event) return;
         event.effectEnabled = Boolean(enabled);
         selectedEventId = event.id;
@@ -4808,7 +4815,7 @@ html>body{padding:0}</style>
       }
 
       function setEffectScaleValue(effectType, scale) {
-        const event = effectEventForType(effectType);
+        const event = editableEffectEventForType(effectType);
         if (!event) return;
         const value = clamp(Number(scale) || 1, .1, 4);
         if (effectType === 'hit') event.hitEffectScale = value;
@@ -4973,7 +4980,7 @@ html>body{padding:0}</style>
         effectSelectorInstances.forEach((instance, effectType) => {
           const event = effectEventForType(effectType);
           const assetId = effectAssetId(effectType, event);
-          const enabled = event?.effectEnabled !== false;
+          const enabled = Boolean(event) && event.effectEnabled !== false;
           const none = assetId === 'none';
           const scale = effectScaleValue(effectType, event);
           instance.section.classList.toggle('is-disabled', !enabled);
@@ -5018,7 +5025,7 @@ html>body{padding:0}</style>
 
       function renderHitEffectControls() {
         const event = controlledHitEvent();
-        hitEffectInput.value = event?.hitEffectId || 'hit_001';
+        hitEffectInput.value = event?.hitEffectId || 'none';
         hitEffectSizeInput.value = event?.hitEffectScale || 1;
         setEffectPreview(hitEffectPreview, hitEffectInput.value === 'none' ? 'none' : hitEffectSpriteKeyMap[hitEffectInput.value] || 'hitEffect', 'HIT 特效圖案預覽');
       }
@@ -5290,10 +5297,9 @@ html>body{padding:0}</style>
 
       function deleteSelectedTimelineEvents() {
         const ids = selectedTimelineEventIds.size ? [...selectedTimelineEventIds] : [selectedEventId];
-        if (events.length - ids.length < 1) return;
         events = events.filter(event => !ids.includes(event.id));
-        selectedEventId = events[0].id;
-        selectedTimelineEventIds = new Set([selectedEventId]);
+        selectedEventId = events[0]?.id ?? null;
+        selectedTimelineEventIds = selectedEventId == null ? new Set() : new Set([selectedEventId]);
         renderEventTrack();
         draw();
       }
@@ -5558,7 +5564,7 @@ html>body{padding:0}</style>
           const activeHitEvent = events
             .filter(event => event.type === 'hit' && hitTriggerTime(event) <= elapsedTime())
             .sort((a, b) => hitTriggerTime(b) - hitTriggerTime(a))[0];
-          const hitEffectId = activeHitEvent?.hitEffectId || 'hit_001';
+          const hitEffectId = activeHitEvent?.hitEffectId || 'none';
           const hitEffectScale = clamp(activeHitEvent?.hitEffectScale || 1, .1, 4);
           const hitEffectHeight = Math.min(115, h * .3) * pulse * hitEffectScale;
           const hitEffectSprites = {
@@ -6346,7 +6352,7 @@ html>body{padding:0}</style>
           event.flightEffect = 'none';
           event.linkPoint = event.linkPoint || 'L06';
         }
-        if (event.type === 'hit' && !event.hitEffectId) event.hitEffectId = 'hit_001';
+        if (event.type === 'hit' && !event.hitEffectId) event.hitEffectId = 'none';
         renderEventTrack();
         draw();
       });
@@ -6440,7 +6446,7 @@ html>body{padding:0}</style>
           flightEffect: source?.flightEffect || 'none',
           effectScale: source?.effectScale || 1,
           linkPoint: source?.linkPoint || 'L06',
-          hitEffectId: source?.hitEffectId || 'hit_001',
+          hitEffectId: source?.hitEffectId || 'none',
           hitEffectScale: source?.hitEffectScale || 1
         };
         events.push(event);
@@ -6453,14 +6459,14 @@ html>body{padding:0}</style>
         scheduleProjectAutosave();
       });
       deleteEventButton.addEventListener('click', () => {
-        if (events.length <= 1) return;
         const deleteId = detailActionEvents().some(event => event.id === selectedDetailActionEventId)
           ? selectedDetailActionEventId
           : selectedEventId;
+        if (deleteId == null) return;
         events = events.filter(event => event.id !== deleteId);
         selectedDetailActionEventId = detailActionEvents()[0]?.id ?? null;
-        selectedEventId = detailActionEvents()[0]?.id ?? events[0].id;
-        selectedTimelineEventIds = new Set([selectedEventId]);
+        selectedEventId = detailActionEvents()[0]?.id ?? events[0]?.id ?? null;
+        selectedTimelineEventIds = selectedEventId == null ? new Set() : new Set([selectedEventId]);
         renderEventTrack();
         draw();
         saveEditorState();
@@ -6723,7 +6729,7 @@ html>body{padding:0}</style>
             timeSeconds: Number(event.time.toFixed(2)),
             normalizedTime: Number((event.time / attackBaseDuration).toFixed(5)),
             parameters: event.params ? event.params.split(';').filter(Boolean) : [],
-            hitEffectId: event.type === 'hit' ? event.hitEffectId || 'hit_001' : null,
+            hitEffectId: event.type === 'hit' ? event.hitEffectId || 'none' : null,
             hitEffectScale: event.type === 'hit' ? Number((event.hitEffectScale || 1).toFixed(2)) : null,
             launchEffectId: ['e1', 'e2'].includes(event.type) ? event.flightEffect || null : null,
             launchEffectScale: ['e1', 'e2'].includes(event.type) ? Number((event.effectScale || 1).toFixed(2)) : null,
