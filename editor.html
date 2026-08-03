@@ -1056,6 +1056,18 @@ html>body{padding:0}</style>
     #unity-flight-editor .ufe-trajectory-upload-status { min-height: 22px; padding: 7px 9px; border-radius: 4px; background: #0d1622; color: #9fb1c6; font-size: 12px; }
     #unity-flight-editor .ufe-trajectory-upload-status.is-success { color: #4ade80; }
     #unity-flight-editor .ufe-trajectory-upload-status.is-error { color: #f87171; }
+    #unity-flight-editor .ufe-speed-segment-panel { grid-column: 1 / -1; display: grid; gap: 8px; padding: 10px; border: 1px solid #31537b; border-radius: 6px; background: #0d1723; }
+    #unity-flight-editor .ufe-speed-segment-panel[hidden] { display: none; }
+    #unity-flight-editor .ufe-speed-segment-head { display: flex; justify-content: space-between; gap: 8px; color: #cbd5e1; }
+    #unity-flight-editor .ufe-speed-segment-head span, #unity-flight-editor .ufe-speed-segment-status { color: #8fa1b5; font-size: 11px; }
+    #unity-flight-editor .ufe-speed-segment-status.is-error { color: #f87171; }
+    #unity-flight-editor .ufe-speed-segment-list { display: grid; gap: 5px; }
+    #unity-flight-editor .ufe-speed-segment-row { display: grid; grid-template-columns: 30px repeat(4, minmax(62px, 1fr)) minmax(92px, 1.25fr) repeat(3, 30px); gap: 5px; align-items: end; padding: 6px; border: 1px solid #293c52; border-radius: 4px; }
+    #unity-flight-editor .ufe-speed-segment-row label { display: grid; gap: 3px; color: #8996a6; font-size: 10px; }
+    #unity-flight-editor .ufe-speed-segment-row input, #unity-flight-editor .ufe-speed-segment-row select { width: 100%; min-width: 0; height: 30px; }
+    #unity-flight-editor .ufe-speed-segment-row .btn { width: 30px; min-width: 30px; height: 30px; padding: 0; }
+    #unity-flight-editor .ufe-speed-segment-actions { display: flex; gap: 6px; }
+    #unity-flight-editor .ufe-speed-curve-preview { display: block; width: 100%; height: 120px; border: 1px solid #293c52; background: #09111b; }
     #unity-flight-editor .ufe-time-readonly { opacity: .78; }
     #unity-flight-editor .ufe-statusbar { min-height: 30px; display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 5px 10px; border: 1px solid #2a3543; background: #101720; color: #7f8b99; font-size: 11px; }
     #unity-flight-editor .ufe-effect-library { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid #2a3543; }
@@ -1154,6 +1166,15 @@ html>body{padding:0}</style>
         <label for="ufe-project-list">已儲存專案</label>
         <select id="ufe-project-list" class="select"><option value="">尚未儲存專案</option></select>
       </div>
+      <div class="ufe-field">
+        <label for="ufe-canvas-background">畫布背景</label>
+        <select id="ufe-canvas-background" class="select">
+          <option value="black">黑色背景</option>
+          <option value="green">綠色背景</option>
+          <option value="police-station">龜有公園前派出所</option>
+        </select>
+      </div>
+      <button id="ufe-project-grid-toggle" class="btn" type="button" aria-pressed="true">▦ 顯示格線</button>
       <div class="ufe-project-actions">
         <button id="ufe-save-project" class="btn btn-primary" type="button">儲存</button>
         <button id="ufe-save-project-as" class="btn" type="button">另存新專案</button>
@@ -1409,8 +1430,21 @@ html>body{padding:0}</style>
         <option value="easeIn">漸快</option>
         <option value="easeOut" selected>漸慢</option>
         <option value="easeInOut">先快後慢</option>
+        <option value="fastSlowFast">快慢快</option>
+        <option value="chargeDash">蓄勢衝刺</option>
+        <option value="customSegments">自訂分段速度</option>
       </select>
     </div>
+    <section id="ufe-speed-segment-panel" class="ufe-speed-segment-panel" hidden>
+      <div class="ufe-speed-segment-head"><strong>自訂分段速度</strong><span>1～8 段｜即時預覽</span></div>
+      <div id="ufe-speed-segment-list" class="ufe-speed-segment-list"></div>
+      <div class="ufe-speed-segment-actions">
+        <button id="ufe-add-speed-segment" class="btn" type="button">＋ 新增區段</button>
+        <button id="ufe-reset-speed-segments" class="btn btn-ghost" type="button">重設為預設值</button>
+      </div>
+      <canvas id="ufe-speed-curve-preview" class="ufe-speed-curve-preview" width="520" height="120" aria-label="速度倍率曲線即時預覽"></canvas>
+      <output id="ufe-speed-segment-status" class="ufe-speed-segment-status"></output>
+    </section>
     <div class="ufe-field">
       <label for="ufe-sequence-interval">依序發射間隔（秒）</label>
       <input id="ufe-sequence-interval" class="input" type="number" min="0" max="10" step="0.01" value="0.3">
@@ -1423,6 +1457,9 @@ html>body{padding:0}</style>
         <option value="easeIn">漸快</option>
         <option value="easeOut" selected>漸慢</option>
         <option value="easeInOut">先快後慢</option>
+        <option value="fastSlowFast">快慢快</option>
+        <option value="chargeDash">蓄勢衝刺</option>
+        <option value="customSegments">自訂分段速度</option>
       </select>
     </div>
     <div class="ufe-field">
@@ -1493,6 +1530,7 @@ html>body{padding:0}</style>
           <option value="top">打陀螺動作（7 格）</option>
           <option value="kick">踢木屐動作（8 格）</option>
           <option value="kick02">踢木屐 02（6 格）</option>
+          <option value="getaSlap">木屐揮擊（6 格）</option>
         </select>
       </div>
       <div class="ufe-animation-scrub">
@@ -1649,6 +1687,7 @@ html>body{padding:0}</style>
         <option value="top">打陀螺動作（7 格）</option>
         <option value="kick">踢木屐動作（8 格）</option>
         <option value="kick02">踢木屐 02（6 格）</option>
+        <option value="getaSlap">木屐揮擊（6 格）</option>
       </select>
     </div>
   </div>
@@ -1745,6 +1784,12 @@ html>body{padding:0}</style>
       const laneDelayInput = root.querySelector('#ufe-lane-delay');
       const laneSpeedInput = root.querySelector('#ufe-lane-speed');
       const laneEaseInput = root.querySelector('#ufe-lane-ease');
+      const speedSegmentPanel = root.querySelector('#ufe-speed-segment-panel');
+      const speedSegmentList = root.querySelector('#ufe-speed-segment-list');
+      const speedCurvePreview = root.querySelector('#ufe-speed-curve-preview');
+      const speedSegmentStatus = root.querySelector('#ufe-speed-segment-status');
+      const addSpeedSegmentButton = root.querySelector('#ufe-add-speed-segment');
+      const resetSpeedSegmentsButton = root.querySelector('#ufe-reset-speed-segments');
       const sequenceIntervalInput = root.querySelector('#ufe-sequence-interval');
       const applySequenceButton = root.querySelector('#ufe-apply-sequence');
       const easeSelect = root.querySelector('#ufe-ease');
@@ -1829,6 +1874,8 @@ html>body{padding:0}</style>
       const renameProjectButton = root.querySelector('#ufe-rename-project');
       const deleteProjectButton = root.querySelector('#ufe-delete-project');
       const projectStatus = root.querySelector('#ufe-project-status');
+      const canvasBackgroundInput = root.querySelector('#ufe-canvas-background');
+      const projectGridToggle = root.querySelector('#ufe-project-grid-toggle');
       const trajectorySaveNameInput = root.querySelector('#ufe-trajectory-save-name');
       const trajectorySaveScopeInput = root.querySelector('#ufe-trajectory-save-scope');
       const trajectoryGroupInput = root.querySelector('#ufe-trajectory-group');
@@ -1865,6 +1912,8 @@ html>body{padding:0}</style>
       let modelPlaybackLastTime = 0;
       let previewMode = false;
       let zoomLocked = false;
+      let canvasBackground = 'black';
+      let showCanvasGrid = true;
       let viewZoom = 1;
       let viewPanX = 0;
       let viewPanY = 0;
@@ -1908,19 +1957,24 @@ html>body{padding:0}</style>
       let draggedTargetAnchorId = null;
       let targetAnchorDpr = 1;
       const sprites = {};
+      const policeStationBackground = new Image();
+      policeStationBackground.src = 'assets/backgrounds/kameari-police-station.png';
+      policeStationBackground.addEventListener('load', () => draw());
       const spriteFiles = {
         doctorIdle: 'assets/characters/doctor/idle/idle.png',
         doctorHit: 'assets/characters/doctor/animations/hit/static.png',
         hitEffect: 'assets/effects/hit/basic/static.png',
         aliangIdle: 'assets/characters/ryotsu/idle/idle.png?v=original-20260802',
         aliangAttack: 'assets/characters/ryotsu/animations/attack/static.png',
-        aliangAttackSheet: 'assets/characters/ryotsu/animations/attack/sheet.png?v=clean-20260802c',
+        aliangAttackSheet: 'assets/characters/ryotsu/animations/attack/sheet.png?v=attack-20260803',
         aliangTopSheet: 'assets/characters/ryotsu/animations/spinning-top/sheet.png',
         doctorHitSheet: 'assets/characters/doctor/animations/hit/sheet.png',
         hitEffectSheet: 'assets/effects/hit/basic/sheet.png'
       };
       spriteFiles.aliangKickSheet = 'assets/characters/ryotsu/animations/kick-01/sheet.png?v=clean-20260802b';
       spriteFiles.aliangKick02Sheet = 'assets/characters/ryotsu/animations/kick-02/sheet.png';
+      spriteFiles.aliangRunSheet = 'assets/characters/ryotsu/animations/run/sheet.png?v=run-20260803';
+      spriteFiles.aliangGetaSlapSheet = 'assets/characters/ryotsu/animations/geta-slap/sheet.png?v=geta-slap-20260803';
       spriteFiles.doctorAttack01Sheet = 'assets/characters/doctor/animations/attack-01/sheet.png';
       spriteFiles.doctorAttack02Sheet = 'assets/characters/doctor/animations/attack-02/sheet.png';
       spriteFiles.doctorAttack03Sheet = 'assets/characters/doctor/animations/attack-03/sheet.png';
@@ -2327,7 +2381,8 @@ html>body{padding:0}</style>
         }
       }
       Object.assign(spriteFiles, {
-        reikoIdle: 'assets/characters/reiko/idle/idle.png',
+        reikoIdle: 'assets/characters/reiko/animations/idle/sheet.png',
+        reikoRunSheet: 'assets/characters/reiko/animations/run/sheet.png',
         reikoCheerSheet: 'assets/characters/reiko/animations/cheer/sheet.png',
         reikoHitSheet: 'assets/characters/reiko/animations/hit/sheet.png',
         reikoAttack01Sheet: 'assets/characters/reiko/animations/combat/attack-01/sheet.png',
@@ -2348,6 +2403,7 @@ html>body{padding:0}</style>
         nakagawaSkill02Sheet: 'assets/characters/nakagawa/animations/skill-02/sheet.png',
         nakagawaSkill03Sheet: 'assets/characters/nakagawa/animations/skill-03/sheet.png',
         nakagawaSkill04Sheet: 'assets/characters/nakagawa/animations/skill-04/sheet.png',
+        nakagawaSkill05Sheet: 'assets/characters/nakagawa/animations/skill-05/sheet.png',
         nakagawaHitSheet: 'assets/characters/nakagawa/animations/hit/sheet.png'
       });
       Object.entries(spriteFiles).forEach(([key, file]) => registerSprite(key, file));
@@ -2371,7 +2427,7 @@ html>body{padding:0}</style>
         reikoFlightOrange06: 'assets/effects/reiko/flight-series/orange-06.png'
       };
       Object.assign(flightEffectFiles, Object.fromEntries(
-        topCombatEffectCatalog.map(effect => [effect.key, `assets/effects/spinning-top/combat/${effect.id}.png`])
+        topCombatEffectCatalog.map(effect => [effect.key, `assets/effects/spinning-top/combat/${effect.id}.png${effect.id === 'fx_top_combat_01' ? '?v=strong-spin-v2' : ''}`])
       ));
       Object.assign(flightEffectFiles, Object.fromEntries(
         getaEffectCatalog.map(effect => [effect.key, `assets/effects/footwear/geta/${effect.id}.png`])
@@ -2442,6 +2498,84 @@ html>body{padding:0}</style>
       });
       const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
       const lerp = (a, b, t) => a + (b - a) * t;
+      const speedCurveModes = ['linear', 'easeIn', 'easeOut', 'easeInOut', 'fastSlowFast', 'chargeDash', 'customSegments'];
+      const speedSegmentEasings = ['linear', 'easeIn', 'easeOut', 'easeInOut', 'step'];
+      const defaultSpeedSegments = () => [
+        { startProgress: 0, endProgress: .2, startSpeed: 1.2, endSpeed: 1.5, easing: 'easeOut' },
+        { startProgress: .2, endProgress: .65, startSpeed: 1.5, endSpeed: .35, easing: 'easeInOut' },
+        { startProgress: .65, endProgress: .72, startSpeed: .2, endSpeed: .15, easing: 'easeInOut' },
+        { startProgress: .72, endProgress: 1, startSpeed: .8, endSpeed: 2, easing: 'easeIn' }
+      ];
+      const presetSpeedSegments = mode => mode === 'chargeDash' ? [
+        { startProgress: 0, endProgress: .45, startSpeed: 1, endSpeed: 1, easing: 'linear' },
+        { startProgress: .45, endProgress: .68, startSpeed: 1, endSpeed: .2, easing: 'easeInOut' },
+        { startProgress: .68, endProgress: .74, startSpeed: .12, endSpeed: .1, easing: 'easeInOut' },
+        { startProgress: .74, endProgress: 1, startSpeed: .8, endSpeed: 2.2, easing: 'easeIn' }
+      ] : defaultSpeedSegments();
+      function sanitizeSpeedSegments(value, fallback = defaultSpeedSegments()) {
+        if (!Array.isArray(value) || !value.length || value.length > 8) return fallback.map(item => ({ ...item }));
+        return value.map(segment => ({
+          startProgress: clamp(Number(segment?.startProgress) || 0, 0, 1),
+          endProgress: clamp(Number(segment?.endProgress) || 0, 0, 1),
+          startSpeed: Math.max(.01, Number(segment?.startSpeed) || .01),
+          endSpeed: Math.max(.01, Number(segment?.endSpeed) || .01),
+          easing: speedSegmentEasings.includes(segment?.easing) ? segment.easing : 'linear'
+        }));
+      }
+      function validateSpeedSegments(segments) {
+        if (!Array.isArray(segments) || segments.length < 1 || segments.length > 8) return '區段數量必須為 1～8 段';
+        if (Math.abs(segments[0].startProgress) > .0001) return '第一段 Start Progress 必須為 0';
+        if (Math.abs(segments.at(-1).endProgress - 1) > .0001) return '最後一段 End Progress 必須為 1';
+        for (let i = 0; i < segments.length; i++) {
+          const item = segments[i];
+          if (item.endProgress <= item.startProgress) return `第 ${i + 1} 段結束進度必須大於起始進度`;
+          if (item.startSpeed < .01 || item.endSpeed < .01) return `第 ${i + 1} 段速度不可小於 0.01`;
+          if (i && Math.abs(item.startProgress - segments[i - 1].endProgress) > .0001) return `第 ${i}、${i + 1} 段之間不可重疊或留白`;
+        }
+        return '';
+      }
+      function speedInterpolation(t, easing) {
+        if (easing === 'step') return t < 1 ? 0 : 1;
+        if (easing === 'easeIn') return t * t;
+        if (easing === 'easeOut') return 1 - (1 - t) * (1 - t);
+        if (easing === 'easeInOut') return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        return t;
+      }
+      function speedMultiplierAt(path, rawProgress) {
+        const mode = speedCurveModes.includes(path?.easing) ? path.easing : 'linear';
+        if (!['fastSlowFast', 'chargeDash', 'customSegments'].includes(mode)) return 1;
+        const segments = mode === 'customSegments' ? sanitizeSpeedSegments(path?.speedSegments) : presetSpeedSegments(mode);
+        const p = clamp(rawProgress, 0, 1);
+        const blendWidth = .01;
+        for (let i = 1; i < segments.length; i++) {
+          const boundary = segments[i].startProgress;
+          if (Math.abs(p - boundary) <= blendWidth) {
+            const blend = speedInterpolation((p - boundary + blendWidth) / (blendWidth * 2), 'easeInOut');
+            return Math.max(.01, lerp(segments[i - 1].endSpeed, segments[i].startSpeed, blend));
+          }
+        }
+        const segment = segments.find(item => p <= item.endProgress + 1e-7) || segments.at(-1);
+        const local = clamp((p - segment.startProgress) / Math.max(.000001, segment.endProgress - segment.startProgress), 0, 1);
+        return Math.max(.01, lerp(segment.startSpeed, segment.endSpeed, speedInterpolation(local, segment.easing)));
+      }
+      function normalizedSpeedProgress(timeFraction, path) {
+        const mode = speedCurveModes.includes(path?.easing) ? path.easing : 'linear';
+        if (!['fastSlowFast', 'chargeDash', 'customSegments'].includes(mode)) return eased(clamp(timeFraction, 0, 1), mode);
+        const steps = 240;
+        const cumulative = [0];
+        let total = 0;
+        for (let i = 1; i <= steps; i++) {
+          const p0 = (i - 1) / steps, p1 = i / steps;
+          total += .5 * (1 / speedMultiplierAt(path, p0) + 1 / speedMultiplierAt(path, p1)) / steps;
+          cumulative.push(total);
+        }
+        const target = clamp(timeFraction, 0, 1) * total;
+        let low = 0, high = steps;
+        while (low < high) { const mid = (low + high) >> 1; if (cumulative[mid] < target) low = mid + 1; else high = mid; }
+        const index = clamp(low, 1, steps);
+        const local = (target - cumulative[index - 1]) / Math.max(1e-8, cumulative[index] - cumulative[index - 1]);
+        return clamp((index - 1 + local) / steps, 0, 1);
+      }
       const duration = () => clamp(Number(durationInput.value) || 1.8, 0.1, 10);
       const shotCount = () => Math.round(clamp(Number(shotCountInput.value) || 1, 1, 20));
       const bulletSpeed = () => clamp(Number(bulletSpeedInput.value) || 10, 1, 100);
@@ -2453,14 +2587,14 @@ html>body{padding:0}</style>
       const laneDelay = path => clamp(Number(path?.delaySeconds) || 0, 0, 10);
       const laneSpeed = path => clamp(Number(path?.speed) || bulletSpeed(), 1, 100);
       const laneFlightDuration = path => duration() * 10 / laneSpeed(path);
-      const laneEase = path => ['linear', 'easeIn', 'easeOut', 'easeInOut'].includes(path?.easing) ? path.easing : easeSelect.value;
+      const laneEase = path => speedCurveModes.includes(path?.easing) ? path.easing : easeSelect.value;
       const maxLaneFlightSpan = () => Math.max(0, ...trajectoryPaths.map(path => laneDelay(path) + laneFlightDuration(path)));
       const attackAnimationCatalog = {
         throw: {
           name: '原攻擊動作',
           spriteKey: 'aliangAttackSheet',
           spriteSheet: 'aliang-attack-sheet.png',
-          frameCount: 6,
+          frameCount: 5,
           baseDuration: .72
         },
         top: {
@@ -2483,9 +2617,23 @@ html>body{padding:0}</style>
           spriteSheet: 'aliang-kick02-sheet.png',
           frameCount: 6,
           baseDuration: .72
+        },
+        getaSlap: {
+          name: '木屐揮擊',
+          spriteKey: 'aliangGetaSlapSheet',
+          spriteSheet: 'assets/characters/ryotsu/animations/geta-slap/sheet.png',
+          frameCount: 6,
+          baseDuration: .72
         }
       };
       const modelAnimationGroups = [
+        {
+          id: 'movement',
+          label: '移動組',
+          actions: [
+            { id: 'run', label: '跑步' }
+          ]
+        },
         {
           id: 'cheer',
           label: '加油組',
@@ -2508,6 +2656,7 @@ html>body{padding:0}</style>
             { id: 'attack_skill', label: 'SKILL 1｜快速連射' },
             { id: 'attack_skill_02', label: 'SKILL 2｜地面跳彈' },
             { id: 'attack_skill_03', label: 'SKILL 3｜槍輪爆破' },
+            { id: 'nakagawa_skill_05', label: '中川 SKILL 5｜左輪精準射擊' },
             { id: 'doctor_attack_01', label: '博士 ATTACK 1｜電擊手刀' },
             { id: 'doctor_attack_02', label: '博士 ATTACK 2｜藥瓶投擲' },
             { id: 'doctor_attack_03', label: '博士 ATTACK 3｜電極杖橫掃' },
@@ -2519,7 +2668,8 @@ html>body{padding:0}</style>
             { id: 'attack_roundhouse', label: '迴旋踢' },
             { id: 'attack_shoulder_throw', label: '過肩摔' },
             { id: 'attack_ultimate', label: 'SKILL 4｜無人機協同射擊' },
-            { id: 'attack_recover', label: '攻擊收招' }
+            { id: 'attack_recover', label: '攻擊收招' },
+            { id: 'getaSlap', label: '木屐揮擊' }
           ]
         },
         {
@@ -2545,27 +2695,30 @@ html>body{padding:0}</style>
           defaultGroup: 'attack',
           defaultAction: 'attack_idle',
           actions: {
+            run: { spriteKey: 'aliangRunSheet', frameCount: 5, duration: .6 },
             attack_idle: { spriteKey: 'aliangIdle', frameCount: 1, duration: 1 },
             attack_normal: { spriteKey: 'aliangKickSheet', frameCount: 8, duration: .96 },
-            attack_yellow: { spriteKey: 'aliangAttackSheet', frameCount: 6, duration: .72 },
+            attack_yellow: { spriteKey: 'aliangAttackSheet', frameCount: 5, duration: .72 },
             attack_skill: { spriteKey: 'aliangTopSheet', frameCount: 7, duration: .84 },
-            attack_recover: { spriteKey: 'aliangKick02Sheet', frameCount: 6, duration: .72 }
+            attack_recover: { spriteKey: 'aliangKick02Sheet', frameCount: 6, duration: .72 },
+            getaSlap: { spriteKey: 'aliangGetaSlapSheet', frameCount: 6, duration: .72 }
           }
         },
         reiko: {
           displayName: '麗子',
           modelType: 'companion',
           available: true,
-          idle: { spriteKey: 'reikoIdle', frameCount: 1, duration: 1 },
+          idle: { spriteKey: 'reikoIdle', frameCount: 3, duration: .72 },
           defaultGroup: 'cheer',
           defaultAction: 'cheer_victory',
           actions: {
-            cheer_idle: { spriteKey: 'reikoIdle', frameCount: 1, duration: 1 },
+            run: { spriteKey: 'reikoRunSheet', frameCount: 4, duration: .48 },
+            cheer_idle: { spriteKey: 'reikoIdle', frameCount: 3, duration: .72 },
             cheer_victory: { spriteKey: 'reikoCheerSheet', frameCount: 5, duration: .75 },
             attack_normal: { spriteKey: 'reikoAttack01Sheet', frameCount: 4, duration: .56 },
             attack_normal_02: { spriteKey: 'reikoAttack02Sheet', frameCount: 5, duration: .75 },
             attack_normal_03: { spriteKey: 'reikoAttack03Sheet', frameCount: 4, duration: .64 },
-            attack_skill: { spriteKey: 'reikoSkill01Sheet', frameCount: 4, duration: .6 },
+            attack_skill: { spriteKey: 'reikoSkill01Sheet', frameCount: 5, duration: .75 },
             attack_skill_02: { spriteKey: 'reikoSkill02Sheet', frameCount: 4, duration: .68 },
             attack_skill_03: { spriteKey: 'reikoSkill03Sheet', frameCount: 5, duration: .85 },
             attack_ultimate: { spriteKey: 'reikoSkill04Sheet', frameCount: 5, duration: 1 },
@@ -2593,6 +2746,7 @@ html>body{padding:0}</style>
             attack_skill_02: { spriteKey: 'nakagawaSkill02Sheet', frameCount: 5, duration: .78 },
             attack_skill_03: { spriteKey: 'nakagawaSkill03Sheet', frameCount: 5, duration: .82 },
             attack_ultimate: { spriteKey: 'nakagawaSkill04Sheet', frameCount: 5, duration: .9 },
+            nakagawa_skill_05: { spriteKey: 'nakagawaSkill05Sheet', frameCount: 5, duration: .76 },
             hit_heavy: { spriteKey: 'nakagawaHitSheet', frameCount: 5, duration: .75 }
           }
         },
@@ -2662,7 +2816,8 @@ html>body{padding:0}</style>
               presetName: String(path?.presetName || ''),
               delaySeconds: clamp(Number(path?.delaySeconds) || 0, 0, 10),
               speed: clamp(Number(path?.speed) || bulletSpeed(), 1, 100),
-              easing: ['linear', 'easeIn', 'easeOut', 'easeInOut'].includes(path?.easing) ? path.easing : easeSelect.value,
+              easing: speedCurveModes.includes(path?.easing) ? path.easing : easeSelect.value,
+              speedSegments: sanitizeSpeedSegments(path?.speedSegments),
               points: Array.isArray(path?.points) && path.points.length >= 2 ? path.points.map(point => ({
                 x: Number(point?.x) || 0,
                 y: Number(point?.y) || 0,
@@ -2700,6 +2855,7 @@ html>body{padding:0}</style>
             delaySeconds: laneDelay(path),
             speed: laneSpeed(path),
             easing: laneEase(path),
+            speedSegments: sanitizeSpeedSegments(path.speedSegments),
             points: path.points.map(point => ({
               x: Number(point.x.toFixed(4)),
               y: Number(point.y.toFixed(4)),
@@ -2744,7 +2900,8 @@ html>body{padding:0}</style>
           presetName: String(path?.presetName || ''),
           delaySeconds: clamp(Number(path?.delaySeconds) || 0, 0, 10),
           speed: clamp(Number(path?.speed) || bulletSpeed(), 1, 100),
-          easing: ['linear', 'easeIn', 'easeOut', 'easeInOut'].includes(path?.easing) ? path.easing : easeSelect.value,
+          easing: speedCurveModes.includes(path?.easing) ? path.easing : easeSelect.value,
+          speedSegments: sanitizeSpeedSegments(path?.speedSegments),
           points: Array.isArray(path?.points) ? path.points.map(point => ({
             x: Number(point?.x) || 0,
             y: Number(point?.y) || 0,
@@ -2998,7 +3155,8 @@ html>body{padding:0}</style>
             selectedAttackAnimation,
             models: modelInstances.map(serializeModelInstance),
             selectedModelId,
-            nextModelId
+            nextModelId,
+            canvas: { background: canvasBackground, showGrid: showCanvasGrid }
           }));
         } catch (error) {
           console.warn('Unable to save editor state', error);
@@ -3042,6 +3200,9 @@ html>body{padding:0}</style>
           selectedAttackAnimation = saved.selectedAttackAnimation in attackAnimationCatalog
             ? saved.selectedAttackAnimation
             : 'throw';
+          canvasBackground = ['black', 'green', 'police-station'].includes(saved.canvas?.background) ? saved.canvas.background : 'black';
+          showCanvasGrid = saved.canvas?.showGrid !== false;
+          canvasBackgroundInput.value = canvasBackground;
           modelInstances = Array.isArray(saved.models)
             ? saved.models.map((model, index) => sanitizeModelInstance(model, index + 1))
             : [];
@@ -3130,11 +3291,13 @@ html>body{padding:0}</style>
             delaySeconds: laneDelay(path),
             speed: laneSpeed(path),
             easing: laneEase(path),
+            speedSegments: sanitizeSpeedSegments(path.speedSegments),
             points: path.points.map(normalizePoint)
           })),
           selectedTrajectoryIndex,
           selectedPathPointIndex,
-          view: { zoom: viewZoom, panX: viewPanX, panY: viewPanY, zoomLocked }
+          view: { zoom: viewZoom, panX: viewPanX, panY: viewPanY, zoomLocked },
+          canvas: { background: canvasBackground, showGrid: showCanvasGrid }
         };
       }
 
@@ -3228,7 +3391,8 @@ html>body{padding:0}</style>
             presetName: path.presetName || null,
             delaySeconds: clamp(Number(path.delaySeconds) || 0, 0, 10),
             speed: clamp(Number(path.speed) || bulletSpeed(), 1, 100),
-            easing: ['linear', 'easeIn', 'easeOut', 'easeInOut'].includes(path.easing) ? path.easing : easeSelect.value,
+            easing: speedCurveModes.includes(path.easing) ? path.easing : easeSelect.value,
+            speedSegments: sanitizeSpeedSegments(path.speedSegments),
             points: Array.isArray(path.points) ? path.points.map(denormalizePoint) : []
           })).filter(path => path.points.length >= 2);
         }
@@ -3238,6 +3402,10 @@ html>body{padding:0}</style>
         viewPanX = Number(state.view?.panX) || 0;
         viewPanY = Number(state.view?.panY) || 0;
         zoomLocked = Boolean(state.view?.zoomLocked);
+        canvasBackground = ['black', 'green', 'police-station'].includes(state.canvas?.background) ? state.canvas.background : 'black';
+        showCanvasGrid = state.canvas?.showGrid !== false;
+        canvasBackgroundInput.value = canvasBackground;
+        syncGridControls();
         lockZoomButton.setAttribute('aria-pressed', String(zoomLocked));
         lockZoomButton.textContent = zoomLocked ? '解除畫布縮放鎖定' : '鎖定畫布縮放';
         ensureRequiredEvents();
@@ -3491,7 +3659,8 @@ html>body{padding:0}</style>
         { id: 'top-target-grind', name: '05｜陀螺環繞目標研磨', delaySeconds: .60, speed: 14, easing: 'easeOut', controlPoints: [[.14,.50],[.28,.36],[.46,.63],[.67,.64],[.78,.52],[.88,.57],[.86,.71],[.73,.74],[.70,.61],[.79,.53],[.90,.62]] },
         { id: 'top-double-ricochet', name: '06｜陀螺雙目標彈射', delaySeconds: .75, speed: 25, easing: 'easeInOut', controlPoints: [[.14,.56],[.25,.38],[.40,.63],[.55,.42],[.68,.69],[.80,.46],[.91,.65]] },
         { id: 'top-boomerang', name: '07｜陀螺迴旋返還', delaySeconds: .90, speed: 21, easing: 'easeInOut', controlPoints: [[.14,.52],[.26,.34],[.43,.59],[.61,.70],[.80,.58],[.88,.42],[.74,.30],[.55,.41],[.37,.62],[.20,.54]] },
-        { id: 'top-stall-finish', name: '08｜陀螺失速搖擺收尾', delaySeconds: 1.05, speed: 13, easing: 'easeOut', controlPoints: [[.14,.50],[.27,.36],[.42,.65],[.57,.62],[.68,.70],[.76,.59],[.82,.72],[.86,.58],[.89,.70],[.91,.65]] }
+        { id: 'top-stall-finish', name: '08｜陀螺失速搖擺收尾', delaySeconds: 1.05, speed: 13, easing: 'easeOut', controlPoints: [[.14,.50],[.27,.36],[.42,.65],[.57,.62],[.68,.70],[.76,.59],[.82,.72],[.86,.58],[.89,.70],[.91,.65]] },
+        { id: 'top-spin-charge-dash', name: '09｜陀螺－旋轉蓄勢衝刺', delaySeconds: 0, speed: 20, easing: 'fastSlowFast', controlPoints: [[.25,.76],[.34,.78],[.43,.75],[.54,.77],[.63,.74],[.78,.70]] }
       ].map(preset => ({ ...preset, pathType: 'nodes', isBuiltIn: true }));
 
       function uploadedTrajectoryScripts() {
@@ -3744,6 +3913,60 @@ html>body{padding:0}</style>
         renderTrajectoryControls();
       }
 
+      function drawSpeedCurvePreview(path) {
+        const context = speedCurvePreview.getContext('2d');
+        const width = speedCurvePreview.width, height = speedCurvePreview.height;
+        context.clearRect(0, 0, width, height);
+        context.strokeStyle = '#26384d'; context.lineWidth = 1;
+        for (let i = 1; i < 4; i++) { context.beginPath(); context.moveTo(0, height * i / 4); context.lineTo(width, height * i / 4); context.stroke(); }
+        context.strokeStyle = '#3cc7e8'; context.lineWidth = 2; context.beginPath();
+        for (let i = 0; i <= 160; i++) {
+          const p = i / 160;
+          const value = Math.min(2.5, speedMultiplierAt(path, p));
+          const x = p * width, y = height - 8 - value / 2.5 * (height - 16);
+          if (!i) context.moveTo(x, y); else context.lineTo(x, y);
+        }
+        context.stroke();
+      }
+
+      function renderSpeedSegmentPanel(path) {
+        const visible = Boolean(path && laneEase(path) === 'customSegments');
+        speedSegmentPanel.hidden = !visible;
+        if (!visible) return;
+        if (!Array.isArray(path.speedSegments)) path.speedSegments = defaultSpeedSegments();
+        speedSegmentList.replaceChildren();
+        path.speedSegments.forEach((segment, index) => {
+          const row = document.createElement('div');
+          row.className = 'ufe-speed-segment-row';
+          row.innerHTML = `<strong>${index + 1}</strong>
+            <label>Start Progress<input class="input" data-key="startProgress" type="number" min="0" max="1" step="0.01" value="${segment.startProgress}"></label>
+            <label>End Progress<input class="input" data-key="endProgress" type="number" min="0" max="1" step="0.01" value="${segment.endProgress}"></label>
+            <label>Start Speed<input class="input" data-key="startSpeed" type="number" min="0.01" step="0.01" value="${segment.startSpeed}"></label>
+            <label>End Speed<input class="input" data-key="endSpeed" type="number" min="0.01" step="0.01" value="${segment.endSpeed}"></label>
+            <label>Easing<select class="select" data-key="easing">${speedSegmentEasings.map(value => `<option value="${value}"${value === segment.easing ? ' selected' : ''}>${({linear:'Linear',easeIn:'Ease In',easeOut:'Ease Out',easeInOut:'Ease In Out',step:'Step'})[value]}</option>`).join('')}</select></label>
+            <button class="btn" data-action="up" type="button" title="上移" ${index === 0 ? 'disabled' : ''}>↑</button>
+            <button class="btn" data-action="down" type="button" title="下移" ${index === path.speedSegments.length - 1 ? 'disabled' : ''}>↓</button>
+            <button class="btn btn-ghost" data-action="delete" type="button" title="刪除" ${path.speedSegments.length === 1 ? 'disabled' : ''}>×</button>`;
+          row.querySelectorAll('[data-key]').forEach(input => input.addEventListener('input', () => {
+            const key = input.dataset.key;
+            segment[key] = key === 'easing' ? input.value : Number(input.value);
+            const error = validateSpeedSegments(path.speedSegments);
+            speedSegmentStatus.textContent = error || '設定有效；總飛行時間已自動歸一化';
+            speedSegmentStatus.classList.toggle('is-error', Boolean(error));
+            if (!error) { drawSpeedCurvePreview(path); draw(); }
+          }));
+          row.querySelector('[data-action="up"]').addEventListener('click', () => { [path.speedSegments[index - 1], path.speedSegments[index]] = [path.speedSegments[index], path.speedSegments[index - 1]]; renderSpeedSegmentPanel(path); });
+          row.querySelector('[data-action="down"]').addEventListener('click', () => { [path.speedSegments[index + 1], path.speedSegments[index]] = [path.speedSegments[index], path.speedSegments[index + 1]]; renderSpeedSegmentPanel(path); });
+          row.querySelector('[data-action="delete"]').addEventListener('click', () => { if (path.speedSegments.length > 1) path.speedSegments.splice(index, 1); renderSpeedSegmentPanel(path); });
+          speedSegmentList.appendChild(row);
+        });
+        const error = validateSpeedSegments(path.speedSegments);
+        speedSegmentStatus.textContent = error || '設定有效；總飛行時間已自動歸一化';
+        speedSegmentStatus.classList.toggle('is-error', Boolean(error));
+        addSpeedSegmentButton.disabled = path.speedSegments.length >= 8;
+        drawSpeedCurvePreview(path);
+      }
+
       function renderTrajectoryControls() {
         trajectorySelect.replaceChildren();
         trajectoryPaths.forEach((path, index) => {
@@ -3768,6 +3991,7 @@ html>body{padding:0}</style>
           saveTrajectoryButton.disabled = true;
           addTrajectoryButton.disabled = false;
           renderTrajectorySidebar();
+          speedSegmentPanel.hidden = true;
           drawTrajectoryShapePreview();
           return;
         }
@@ -3782,6 +4006,7 @@ html>body{padding:0}</style>
         laneDelayInput.value = laneDelay(path).toFixed(2);
         laneSpeedInput.value = String(laneSpeed(path));
         laneEaseInput.value = laneEase(path);
+        renderSpeedSegmentPanel(path);
         const nodeTotal = Math.max(0, path.points.length - 2);
         trajectoryFormat.textContent = trajectoryPaths
           .map((item, index) => `起點${index + 1} → 終點${index + 1}`)
@@ -3835,6 +4060,7 @@ html>body{padding:0}</style>
           delaySeconds: Number(laneDelay(path).toFixed(3)),
           speed: Number(laneSpeed(path).toFixed(3)),
           easing: laneEase(path),
+          speedSegments: laneEase(path) === 'customSegments' ? sanitizeSpeedSegments(path.speedSegments) : undefined,
           controlPoints: path.points.map((point, pointIndex) => ({
             role: pointIndex === 0 ? 'start' : pointIndex === path.points.length - 1 ? 'end' : 'node',
             x: Number(clamp(point.x / width, 0, 1).toFixed(6)),
@@ -3874,7 +4100,12 @@ html>body{padding:0}</style>
           if (typeof trajectory.presetName !== 'string' || !trajectory.presetName.trim()) throw new Error(`軌道 ${trajectoryIndex + 1} 缺少預設名稱`);
           if (trajectory.delaySeconds != null && (!Number.isFinite(trajectory.delaySeconds) || trajectory.delaySeconds < 0 || trajectory.delaySeconds > 10)) throw new Error(`軌道 ${trajectoryIndex + 1} 的發射延遲無效`);
           if (trajectory.speed != null && (!Number.isFinite(trajectory.speed) || trajectory.speed < 1 || trajectory.speed > 100)) throw new Error(`軌道 ${trajectoryIndex + 1} 的速度無效`);
-          if (trajectory.easing != null && !['linear', 'easeIn', 'easeOut', 'easeInOut'].includes(trajectory.easing)) throw new Error(`軌道 ${trajectoryIndex + 1} 的速度曲線無效`);
+          if (trajectory.easing != null && !speedCurveModes.includes(trajectory.easing)) throw new Error(`軌道 ${trajectoryIndex + 1} 的速度曲線無效`);
+          if (trajectory.easing === 'customSegments') {
+            const segments = sanitizeSpeedSegments(trajectory.speedSegments, []);
+            const error = validateSpeedSegments(segments);
+            if (error) throw new Error(`軌道 ${trajectoryIndex + 1}：${error}`);
+          }
           if (!Array.isArray(trajectory.controlPoints) || trajectory.controlPoints.length < 2 || trajectory.controlPoints.length > 12) {
             throw new Error(`軌道 ${trajectoryIndex + 1} 的控制點必須為 2～12 個`);
           }
@@ -3897,7 +4128,8 @@ html>body{padding:0}</style>
           presetName: trajectory.presetName,
           delaySeconds: clamp(Number(trajectory.delaySeconds) || 0, 0, 10),
           speed: clamp(Number(trajectory.speed) || bulletSpeed(), 1, 100),
-          easing: ['linear', 'easeIn', 'easeOut', 'easeInOut'].includes(trajectory.easing) ? trajectory.easing : easeSelect.value,
+          easing: speedCurveModes.includes(trajectory.easing) ? trajectory.easing : easeSelect.value,
+          speedSegments: sanitizeSpeedSegments(trajectory.speedSegments),
           points: trajectory.controlPoints.map((point, pointIndex, list) => ({
             x: point.x * width,
             y: point.y * height,
@@ -4192,6 +4424,30 @@ html>body{padding:0}</style>
         for (let y = 0; y <= h; y += step) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
         ctx.stroke();
         ctx.globalAlpha = 1;
+      }
+
+      function syncGridControls() {
+        const stage = canvas.closest('.ufe-stage');
+        stage?.classList.toggle('is-grid-hidden', !showCanvasGrid);
+        projectGridToggle.setAttribute('aria-pressed', String(showCanvasGrid));
+        projectGridToggle.textContent = showCanvasGrid ? '▦ 顯示格線' : '▦ 隱藏格線';
+        root.querySelector('#ufe-toolbar-grid-toggle')?.setAttribute('aria-pressed', String(showCanvasGrid));
+      }
+
+      function drawCanvasBackground(w, h, fallbackColor) {
+        if (canvasBackground === 'police-station' && policeStationBackground.complete && policeStationBackground.naturalWidth) {
+          const imageRatio = policeStationBackground.naturalWidth / policeStationBackground.naturalHeight;
+          const canvasRatio = w / h;
+          const sourceWidth = imageRatio > canvasRatio ? policeStationBackground.naturalHeight * canvasRatio : policeStationBackground.naturalWidth;
+          const sourceHeight = imageRatio > canvasRatio ? policeStationBackground.naturalHeight : policeStationBackground.naturalWidth / canvasRatio;
+          const sourceX = (policeStationBackground.naturalWidth - sourceWidth) / 2;
+          const sourceY = (policeStationBackground.naturalHeight - sourceHeight) / 2;
+          ctx.drawImage(policeStationBackground, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, w, h);
+          return;
+        }
+        ctx.fillStyle = canvasBackground === 'green' ? '#00a651' : '#000000';
+        if (!['black', 'green'].includes(canvasBackground)) ctx.fillStyle = fallbackColor;
+        ctx.fillRect(0, 0, w, h);
       }
 
       function anchorToEditorPoint(anchor) {
@@ -4501,13 +4757,16 @@ html>body{padding:0}</style>
       function activeProjectileCollisions(elapsed) {
         const collisions = [];
         const seen = new Set();
-        for (const event of projectileEvents()) {
+        // Only an actual flight-effect projectile can hit a target. Launch flashes
+        // and standalone HIT timeline markers never trigger collision feedback.
+        for (const event of flightEvents()) {
+          if (event.effectEnabled === false || !event.flightEffect || event.flightEffect === 'none') continue;
           for (let lane = 0; lane < trajectoryCount(); lane++) {
             const path = trajectoryPaths[lane] || trajectoryPaths[0];
             const eventElapsed = elapsed - event.time / attackSpeed() - laneDelay(path);
             const laneDuration = laneFlightDuration(path);
             if (eventElapsed < 0 || eventElapsed > laneDuration) continue;
-            const progressOnPath = eased(clamp(eventElapsed / laneDuration, 0, 1), laneEase(path));
+            const progressOnPath = normalizedSpeedProgress(eventElapsed / laneDuration, path);
             for (const target of targetAnchorEntries()) {
               const point = pointOnLane(progressOnPath, lane, event);
               const key = collisionTargetKey(target);
@@ -5630,13 +5889,12 @@ html>body{padding:0}</style>
         const c = colors();
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, w, h);
-        ctx.fillStyle = c.bg;
-        ctx.fillRect(0, 0, w, h);
+        drawCanvasBackground(w, h, c.bg);
         ctx.setTransform(
           dpr * viewZoom, 0, 0, dpr * viewZoom,
           dpr * viewPanX, dpr * viewPanY
         );
-        if (!previewMode) grid(c, w, h);
+        if (!previewMode && showCanvasGrid) grid(c, w, h);
 
         // The old yellow attacker was a built-in placeholder. The canvas now only draws models added by the user.
         if (!previewMode && roleAnchorModel()) drawCharacterAnchors();
@@ -5686,7 +5944,7 @@ html>body{padding:0}</style>
             const eventElapsed = elapsedTime() - event.time / attackSpeed() - laneDelay(path);
             const laneDuration = laneFlightDuration(path);
             if (eventElapsed < 0 || eventElapsed > laneDuration) continue;
-            const ep = eased(clamp(eventElapsed / laneDuration, 0, 1), laneEase(path));
+            const ep = normalizedSpeedProgress(eventElapsed / laneDuration, path);
             for (let shot = 0; shot < shotCount(); shot++) {
               const shotT = ep - shot * bulletSpacing() / 10;
               if (shotT < 0 || shotT > 1) continue;
@@ -5710,10 +5968,15 @@ html>body{padding:0}</style>
           const pulse = .82 + Math.sin(performance.now() / 55) * .12;
           const hitPoint = activeCollisionTarget?.point || targetHitOrigin();
           const effectFrame = Math.min(hitEffectFrameCount - 1, Math.floor(hitAnimationProgress * hitEffectFrameCount));
-          const activeHitEvent = events
-            .filter(event => event.type === 'hit' && hitTriggerTime(event) <= elapsedTime())
-            .sort((a, b) => hitTriggerTime(b) - hitTriggerTime(a))[0];
-          const hitEffectId = activeHitEvent?.hitEffectId || 'none';
+          const hitEvents = events.filter(event => event.type === 'hit' && event.effectEnabled !== false);
+          const configuredHitEvents = hitEvents.filter(event => event.hitEffectId && event.hitEffectId !== 'none');
+          const activeHitEvent = configuredHitEvents
+            .filter(event => hitTriggerTime(event) <= elapsedTime())
+            .sort((a, b) => hitTriggerTime(b) - hitTriggerTime(a))[0]
+            || (activeCollisionTarget ? configuredHitEvents.sort((a, b) => a.time - b.time)[0] : null);
+          // A physical collision must always provide visual feedback. When the project has
+          // no configured HIT effect (or its event occurs later), use the built-in spark.
+          const hitEffectId = activeHitEvent?.hitEffectId || (activeCollisionTarget ? 'hit_001' : 'none');
           const hitEffectScale = clamp(activeHitEvent?.hitEffectScale || 1, .1, 4);
           const hitEffectHeight = Math.min(115, h * .3) * pulse * hitEffectScale;
           const hitEffectSprites = {
@@ -5731,7 +5994,7 @@ html>body{padding:0}</style>
             hit_013: sprites.blueVortex01,
             hit_014: sprites.blueImpact06
           };
-          if (activeHitEvent?.effectEnabled === false || hitEffectId === 'none') {
+          if (hitEffectId === 'none') {
             // HIT 事件仍會觸發受擊動作，但不繪製擊中特效。
           } else if (hitEffectId === 'hit_001') {
             if (!drawSheetFrame(sprites.hitEffectSheet, effectFrame, hitEffectFrameCount, hitPoint.x, hitPoint.y, hitEffectHeight, .5, .5)) {
@@ -5840,20 +6103,12 @@ html>body{padding:0}</style>
           hitAnimationProgress = clamp(hitElapsed / hitDuration, 0, .999);
           return;
         }
+        // No physical collision means no hit animation and no hit effect. HIT
+        // timeline events only configure which visual to use after a collision.
         activeCollisionTarget = null;
-        if (targetAnchorEntries().length) {
-          hitAnimationActive = false;
-          hitEffectActive = false;
-          hitAnimationProgress = 0;
-          return;
-        }
-        const latestHit = events
-          .filter(event => event.type === 'hit' && hitTriggerTime(event) <= elapsed)
-          .sort((a, b) => hitTriggerTime(b) - hitTriggerTime(a))[0];
-        const hitElapsed = latestHit ? elapsed - hitTriggerTime(latestHit) : Infinity;
-        hitAnimationActive = Boolean(latestHit && hitElapsed >= 0);
-        hitEffectActive = Boolean(latestHit && hitElapsed >= 0 && hitElapsed <= hitDuration * .58);
-        hitAnimationProgress = hitAnimationActive ? clamp(hitElapsed / hitDuration, 0, .999) : 0;
+        hitAnimationActive = false;
+        hitEffectActive = false;
+        hitAnimationProgress = 0;
       }
 
       const playbackRuntime = globalThis.UnifiedFlightRuntime || {
@@ -6217,7 +6472,26 @@ html>body{padding:0}</style>
         const path = trajectoryPaths[selectedTrajectoryIndex];
         if (!path) return;
         path.easing = laneEaseInput.value;
+        if (path.easing === 'customSegments' && !Array.isArray(path.speedSegments)) path.speedSegments = defaultSpeedSegments();
+        renderSpeedSegmentPanel(path);
         renderTrajectorySidebar();
+        draw();
+      });
+      addSpeedSegmentButton.addEventListener('click', () => {
+        const path = trajectoryPaths[selectedTrajectoryIndex];
+        if (!path || path.speedSegments.length >= 8) return;
+        const last = path.speedSegments.at(-1);
+        path.speedSegments.push({ startProgress: last.endProgress, endProgress: 1, startSpeed: last.endSpeed, endSpeed: last.endSpeed, easing: 'linear' });
+        last.endProgress = Math.max(last.startProgress + .01, Number((last.endProgress - .1).toFixed(2)));
+        path.speedSegments.at(-1).startProgress = last.endProgress;
+        renderSpeedSegmentPanel(path);
+        draw();
+      });
+      resetSpeedSegmentsButton.addEventListener('click', () => {
+        const path = trajectoryPaths[selectedTrajectoryIndex];
+        if (!path) return;
+        path.speedSegments = defaultSpeedSegments();
+        renderSpeedSegmentPanel(path);
         draw();
       });
       applySequenceButton.addEventListener('click', () => {
@@ -6786,6 +7060,19 @@ html>body{padding:0}</style>
 
       saveProjectButton.addEventListener('click', () => saveNamedProject(false));
       saveProjectAsButton.addEventListener('click', () => saveNamedProject(true));
+      canvasBackgroundInput.addEventListener('change', () => {
+        canvasBackground = canvasBackgroundInput.value;
+        draw();
+        saveEditorState();
+        scheduleProjectAutosave();
+      });
+      projectGridToggle.addEventListener('click', () => {
+        showCanvasGrid = !showCanvasGrid;
+        syncGridControls();
+        draw();
+        saveEditorState();
+        scheduleProjectAutosave();
+      });
       projectListInput.addEventListener('change', () => {
         const project = projectLibrary().find(item => item.id === projectListInput.value);
         if (!project) return;
@@ -6959,6 +7246,7 @@ html>body{padding:0}</style>
             bulletSpeed: Number(laneSpeed(path).toFixed(3)),
             flightDurationSeconds: Number(laneFlightDuration(path).toFixed(3)),
             easing: laneEase(path),
+            speedSegments: laneEase(path) === 'customSegments' ? sanitizeSpeedSegments(path.speedSegments) : undefined,
             controlPoints: path.points.map((p, pointIndex) => ({
               index: pointIndex,
               role: pointIndex === 0 ? 'start' : pointIndex === path.points.length - 1 ? 'end' : 'node',
@@ -7036,7 +7324,7 @@ html>body{padding:0}</style>
         const resetView = document.createElement('button');
         resetView.type = 'button'; resetView.className = 'btn'; resetView.textContent = '重設視圖';
         const gridToggle = document.createElement('button');
-        gridToggle.type = 'button'; gridToggle.className = 'btn'; gridToggle.textContent = '▦ 格線'; gridToggle.setAttribute('aria-pressed', 'true');
+        gridToggle.type = 'button'; gridToggle.id = 'ufe-toolbar-grid-toggle'; gridToggle.className = 'btn'; gridToggle.textContent = '▦ 格線'; gridToggle.setAttribute('aria-pressed', 'true');
         const fullscreen = document.createElement('button');
         fullscreen.type = 'button'; fullscreen.className = 'btn'; fullscreen.textContent = '⛶'; fullscreen.title = '全螢幕畫布';
         const screenshotButton = document.createElement('a');
@@ -7049,7 +7337,7 @@ html>body{padding:0}</style>
         zoomOut.addEventListener('click', () => { viewZoom = clamp(viewZoom / 1.15, .6, 2.5); updateZoomLabel(); });
         zoomIn.addEventListener('click', () => { viewZoom = clamp(viewZoom * 1.15, .6, 2.5); updateZoomLabel(); });
         resetView.addEventListener('click', () => { viewZoom = 1; viewPanX = 0; viewPanY = 0; updateZoomLabel(); });
-        gridToggle.addEventListener('click', () => { const hidden = stage.classList.toggle('is-grid-hidden'); gridToggle.setAttribute('aria-pressed', String(!hidden)); });
+        gridToggle.addEventListener('click', () => { showCanvasGrid = !showCanvasGrid; syncGridControls(); draw(); saveEditorState(); scheduleProjectAutosave(); });
         fullscreen.addEventListener('click', () => { if (document.fullscreenElement) document.exitFullscreen?.(); else stage.requestFullscreen?.(); });
         screenshotButton.addEventListener('click', () => prepareCanvasScreenshot(screenshotButton));
         recordButton.addEventListener('click', () => {
@@ -8075,7 +8363,7 @@ html>body{padding:0}</style>
             target.animationGroup = groupInput.value;
             const group = modelAnimationGroups.find(item => item.id === target.animationGroup);
             target.animationId = group.actions.find(action => modelCharacterCatalog[target.characterId].actions[action.id])?.id || group.actions[0].id;
-            target.loop = target.animationGroup === 'cheer' || target.animationId.endsWith('_idle');
+            target.loop = target.animationGroup === 'movement' || target.animationGroup === 'cheer' || target.animationId.endsWith('_idle');
             if (target.characterId === 'ryotsu' && target.animationId in attackAnimationCatalog) {
               syncAttackAnimationFromModel(target);
               renderEventTrack();
@@ -8089,7 +8377,7 @@ html>body{padding:0}</style>
             resetPlayback(target);
             target.animationId = actionInput.value;
             target.animationGroup = modelGroupForAction(target.animationId);
-            target.loop = target.animationGroup === 'cheer' || target.animationId.endsWith('_idle');
+            target.loop = target.animationGroup === 'movement' || target.animationGroup === 'cheer' || target.animationId.endsWith('_idle');
             if (target.characterId === 'ryotsu' && target.animationId in attackAnimationCatalog) {
               syncAttackAnimationFromModel(target);
               renderEventTrack();
@@ -8246,6 +8534,7 @@ html>body{padding:0}</style>
       }
 
       buildWorkspaceLayout();
+      syncGridControls();
       const observer = new ResizeObserver(resize);
       observer.observe(canvas.parentElement);
       const anchorObserver = new ResizeObserver(resizeAnchorCanvas);
@@ -8255,6 +8544,7 @@ html>body{padding:0}</style>
         targetAnchorObserver.observe(targetAnchorCanvas.parentElement);
       }
       restoreEditorState();
+      syncGridControls();
       anchorModelTypeInput.value = activeAnchorCharacter().modelType;
       syncAnchorModelOptions();
       loadAnchorsFromSelectedModel();
