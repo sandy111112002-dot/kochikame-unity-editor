@@ -2105,8 +2105,57 @@ html>body{padding:0}</style>
       const nakagawaLaunchEffectCatalog = ['白金槍口閃光', '黃金六芒槍焰', '警徽衝擊環', '藍白電磁槍火', '銀色煙圈', '赤金爆裂槍焰'].map((name, index) => ({ id: `fx_nakagawa_launch_${String(index + 1).padStart(2, '0')}`, key: `nakagawaLaunch${String(index + 1).padStart(2, '0')}`, name }));
       const nakagawaFlightEffectCatalog = ['白金高速彈', '黃金曳光彈', '警徽能量彈', '藍白電磁彈', '跳彈金線', '無人機光束彈'].map((name, index) => ({ id: `fx_nakagawa_flight_${String(index + 1).padStart(2, '0')}`, key: `nakagawaFlight${String(index + 1).padStart(2, '0')}`, name }));
       const nakagawaHitEffectCatalog = ['白金星爆', '黃金警徽爆', '藍白電擊', '銀色破甲碎片', '跳彈十字火花', '無人機鎖定爆'].map((name, index) => ({ id: `hit_nakagawa_${String(index + 1).padStart(2, '0')}`, key: `nakagawaHit${String(index + 1).padStart(2, '0')}`, name }));
+      const expandedElementalEffectCatalog = [
+        { name: '火焰彈痕', flightId: 'fx_elemental_fire_streak', flightKey: 'elementalFireStreak', hitId: 'hit_elemental_fire_burst', hitKey: 'elementalFireBurst' },
+        { name: '爆破彈', flightId: 'fx_elemental_explosive_round', flightKey: 'elementalExplosiveRound', hitId: 'hit_elemental_explosion', hitKey: 'elementalExplosion' },
+        { name: '烈焰火球', flightId: 'fx_elemental_fireball', flightKey: 'elementalFireball', hitId: 'hit_elemental_fire_ring', hitKey: 'elementalFireRing' },
+        { name: '冰晶箭', flightId: 'fx_elemental_ice_arrow', flightKey: 'elementalIceArrow', hitId: 'hit_elemental_ice_burst', hitKey: 'elementalIceBurst' },
+        { name: '雷電箭', flightId: 'fx_elemental_lightning_bolt', flightKey: 'elementalLightningBolt', hitId: 'hit_elemental_lightning_burst', hitKey: 'elementalLightningBurst' },
+        { name: '毒液彈', flightId: 'fx_elemental_poison_round', flightKey: 'elementalPoisonRound', hitId: 'hit_elemental_poison_splash', hitKey: 'elementalPoisonSplash' },
+        { name: '聖光射線', flightId: 'fx_elemental_holy_ray', flightKey: 'elementalHolyRay', hitId: 'hit_elemental_holy_burst', hitKey: 'elementalHolyBurst' },
+        { name: '暗影紫焰', flightId: 'fx_elemental_shadow_flame', flightKey: 'elementalShadowFlame', hitId: 'hit_elemental_shadow_burst', hitKey: 'elementalShadowBurst' },
+        { name: '星宇能量球', flightId: 'fx_elemental_cosmic_orb', flightKey: 'elementalCosmicOrb', hitId: 'hit_elemental_cosmic_burst', hitKey: 'elementalCosmicBurst' },
+        { name: '疾風刃', flightId: 'fx_elemental_wind_blade', flightKey: 'elementalWindBlade', hitId: 'hit_elemental_wind_burst', hitKey: 'elementalWindBurst' }
+      ];
+      const steelBallEffectCatalog = [
+        { id: 'fx_steel_ball_gold', key: 'steelBallGold', name: '黃金曳光鋼珠' },
+        { id: 'fx_steel_ball_fire', key: 'steelBallFire', name: '烈焰鋼珠' },
+        { id: 'fx_steel_ball_lightning', key: 'steelBallLightning', name: '雷電鋼珠' },
+        { id: 'fx_steel_ball_ice', key: 'steelBallIce', name: '冰霜鋼珠' },
+        { id: 'fx_steel_ball_cosmic', key: 'steelBallCosmic', name: '星宇鋼珠' },
+        { id: 'fx_steel_ball_holy', key: 'steelBallHoly', name: '聖光鋼珠' }
+      ];
+      const ufoEffectCatalog = [
+        { id: 'fx_ufo_vortex', key: 'ufoVortex', name: '飛碟蒼藍旋風', upright: true },
+        { id: 'fx_ufo_wave_dash', key: 'ufoWaveDash', name: '飛碟浪潮衝刺', facing: 'right' },
+        { id: 'fx_ufo_comet_dash', key: 'ufoCometDash', name: '飛碟彗星衝刺', facing: 'right' },
+        { id: 'fx_ufo_twin_ring', key: 'ufoTwinRing', name: '飛碟雙環能量', upright: true },
+        { id: 'fx_ufo_speed_dash', key: 'ufoSpeedDash', name: '飛碟高速突進', facing: 'right' },
+        { id: 'fx_ufo_shock_ring', key: 'ufoShockRing', name: '飛碟衝擊環', upright: true },
+        { id: 'fx_ufo_tornado', key: 'ufoTornado', name: '飛碟龍捲風', upright: true },
+        { id: 'fx_ufo_orbit', key: 'ufoOrbit', name: '飛碟軌道環', upright: true }
+      ];
+      const additionalElementalHitCatalog = [
+        { id: 'hit_elemental_thunder_burst', key: 'elementalThunderBurst', name: '藍金雷爆' },
+        { id: 'hit_elemental_ice_crystal', key: 'elementalIceCrystal', name: '冰晶爆裂' },
+        { id: 'hit_elemental_cyber_burst', key: 'elementalCyberBurst', name: '霓虹能量爆' },
+        { id: 'hit_elemental_wind_ring', key: 'elementalWindRing', name: '疾風衝擊環' },
+        { id: 'hit_elemental_holy_starburst', key: 'elementalHolyStarburst', name: '聖光星爆' },
+        { id: 'hit_elemental_inferno_burst', key: 'elementalInfernoBurst', name: '烈焰大爆發' },
+        { id: 'hit_elemental_void_burst', key: 'elementalVoidBurst', name: '虛空紫爆' },
+        { id: 'hit_elemental_acid_splash', key: 'elementalAcidSplash', name: '酸液噴發' },
+        { id: 'hit_elemental_storm_strike', key: 'elementalStormStrike', name: '雷雲落雷' },
+        { id: 'hit_elemental_lightning_strike', key: 'elementalLightningStrike', name: '巨型雷擊' }
+      ];
       [...nakagawaLaunchEffectCatalog, ...nakagawaFlightEffectCatalog].forEach(effect => { effectSpriteKeyMap[effect.id] = effect.key; });
       nakagawaHitEffectCatalog.forEach(effect => { hitEffectSpriteKeyMap[effect.id] = effect.key; });
+      expandedElementalEffectCatalog.forEach(effect => {
+        effectSpriteKeyMap[effect.flightId] = effect.flightKey;
+        hitEffectSpriteKeyMap[effect.hitId] = effect.hitKey;
+      });
+      steelBallEffectCatalog.forEach(effect => { effectSpriteKeyMap[effect.id] = effect.key; });
+      ufoEffectCatalog.forEach(effect => { effectSpriteKeyMap[effect.id] = effect.key; });
+      additionalElementalHitCatalog.forEach(effect => { hitEffectSpriteKeyMap[effect.id] = effect.key; });
       const isStandaloneSpinningTopEffect = effectId => effectId === 'fx_spinning_top_01';
       const isTopCombatEffect = effectId => /^fx_top_combat_\d{2}$/.test(effectId || '')
         || /^hit_top_combat_\d{2}$/.test(effectId || '');
@@ -2114,6 +2163,30 @@ html>body{padding:0}</style>
         || /^fx_top_combat_\d{2}$/.test(effectId || '')
         || /^hit_top_combat_\d{2}$/.test(effectId || '');
       const flightEffectMotionProfiles = Object.freeze({
+        fx_elemental_fire_streak: { facing: 'right' },
+        fx_elemental_explosive_round: { facing: 'right' },
+        fx_elemental_fireball: { facing: 'right' },
+        fx_elemental_ice_arrow: { facing: 'right' },
+        fx_elemental_lightning_bolt: { facing: 'right' },
+        fx_elemental_poison_round: { facing: 'right' },
+        fx_elemental_holy_ray: { facing: 'right' },
+        fx_elemental_shadow_flame: { facing: 'right' },
+        fx_elemental_cosmic_orb: { facing: 'right' },
+        fx_elemental_wind_blade: { facing: 'right' },
+        fx_steel_ball_gold: { facing: 'right' },
+        fx_steel_ball_fire: { facing: 'right' },
+        fx_steel_ball_lightning: { facing: 'right' },
+        fx_steel_ball_ice: { facing: 'right' },
+        fx_steel_ball_cosmic: { facing: 'right' },
+        fx_steel_ball_holy: { facing: 'right' },
+        fx_ufo_vortex: { upright: true },
+        fx_ufo_wave_dash: { facing: 'right' },
+        fx_ufo_comet_dash: { facing: 'right' },
+        fx_ufo_twin_ring: { upright: true },
+        fx_ufo_speed_dash: { facing: 'right' },
+        fx_ufo_shock_ring: { upright: true },
+        fx_ufo_tornado: { upright: true },
+        fx_ufo_orbit: { upright: true },
         fx_geta_01: { facing: 'right' },
         fx_geta_02: { facing: 'left' },
         fx_geta_03: { facing: 'left' },
@@ -2306,6 +2379,19 @@ html>body{padding:0}</style>
       [...nakagawaLaunchEffectCatalog.map(effect => [effect, 'launch']), ...nakagawaFlightEffectCatalog.map(effect => [effect, 'flight']), ...nakagawaHitEffectCatalog.map(effect => [effect, 'hit'])].forEach(([effect, kind]) => {
         flightEffectFiles[effect.key] = `assets/effects/nakagawa/${kind}/fx_nakagawa_${kind}_${effect.id.slice(-2)}.png`;
       });
+      expandedElementalEffectCatalog.forEach(effect => {
+        flightEffectFiles[effect.flightKey] = `assets/effects/elemental/expanded/${effect.flightId}.png`;
+        flightEffectFiles[effect.hitKey] = `assets/effects/elemental/expanded/${effect.hitId}.png`;
+      });
+      steelBallEffectCatalog.forEach(effect => {
+        flightEffectFiles[effect.key] = `assets/effects/elemental/expanded/${effect.id}.png`;
+      });
+      ufoEffectCatalog.forEach(effect => {
+        flightEffectFiles[effect.key] = `assets/effects/ufo/${effect.id}.png`;
+      });
+      additionalElementalHitCatalog.forEach(effect => {
+        flightEffectFiles[effect.key] = `assets/effects/elemental/expanded/${effect.id}.png`;
+      });
       Object.entries(flightEffectFiles).forEach(([key, file]) => registerSprite(key, file));
       topCombatEffectCatalog.forEach(effect => {
         [launch1EffectInput, launch2EffectInput, flightEffectInput].forEach(select => {
@@ -2330,6 +2416,19 @@ html>body{padding:0}</style>
       nakagawaLaunchEffectCatalog.forEach(effect => [launch1EffectInput, launch2EffectInput, flightEffectInput].forEach(select => select.appendChild(new Option(`中川發射｜${effect.name}`, effect.id))));
       nakagawaFlightEffectCatalog.forEach(effect => [launch1EffectInput, launch2EffectInput, flightEffectInput].forEach(select => select.appendChild(new Option(`中川飛行｜${effect.name}`, effect.id))));
       nakagawaHitEffectCatalog.forEach(effect => hitEffectInput.appendChild(new Option(`中川擊中｜${effect.name}`, effect.id)));
+      expandedElementalEffectCatalog.forEach(effect => {
+        [launch1EffectInput, launch2EffectInput, flightEffectInput].forEach(select => select.appendChild(new Option(`元素飛行｜${effect.name}`, effect.flightId)));
+        hitEffectInput.appendChild(new Option(`元素擊中｜${effect.name}`, effect.hitId));
+      });
+      steelBallEffectCatalog.forEach(effect => {
+        [launch1EffectInput, launch2EffectInput, flightEffectInput].forEach(select => select.appendChild(new Option(`鋼珠｜${effect.name}`, effect.id)));
+      });
+      ufoEffectCatalog.forEach(effect => {
+        [launch1EffectInput, launch2EffectInput, flightEffectInput].forEach(select => select.appendChild(new Option(`飛碟｜${effect.name}`, effect.id)));
+      });
+      additionalElementalHitCatalog.forEach(effect => {
+        hitEffectInput.appendChild(new Option(`元素擊中｜${effect.name}`, effect.id));
+      });
 
       const css = name => getComputedStyle(root).getPropertyValue(name).trim();
       const colors = () => ({
