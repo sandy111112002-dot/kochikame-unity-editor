@@ -45,6 +45,7 @@
       duration: Math.max(.001, finite(path.duration, scene.playback.duration)),
       speed: Math.max(0, finite(path.speed)),
       easing: path.easing || 'linear',
+      speedSegments: Array.isArray(path.speedSegments) ? clone(path.speedSegments) : undefined,
       points: Array.isArray(path.points) ? path.points.map(p => point(p)) : []
     })) : [];
     scene.events = Array.isArray(input.events) ? input.events.map((event, index) => ({
@@ -97,7 +98,7 @@
         { id: 'attacker', role: 'attacker', position: point(input.attackerPosition) },
         { id: 'target', role: 'target', position: point(input.targetPosition) }
       ],
-      trajectories: (input.trajectories || []).map((path, index) => ({ id: path.id || `trajectory-${index + 1}`, delay: finite(path.delaySeconds), duration, speed: finite(path.speed, controls.bulletSpeed), easing: path.easing || controls.easing, points: path.points || [] })),
+      trajectories: (input.trajectories || []).map((path, index) => ({ id: path.id || `trajectory-${index + 1}`, delay: finite(path.delaySeconds), duration, speed: finite(path.speed, controls.bulletSpeed), easing: path.easing || controls.easing, speedSegments: path.speedSegments, points: path.points || [] })),
       events: (input.events || []).map(event => ({ id: event.id, type: event.type, time: event.time, params: event.params || null })),
       collision: input.collision || { enabled: false }
     });
